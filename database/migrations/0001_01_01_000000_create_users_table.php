@@ -27,7 +27,7 @@ return new class extends Migration
             $table->text('address')->nullable();
             $table->string('photo')->nullable();
             $table->boolean('is_admin')->default(false); 
-            $table->string('status')->nullable();
+            $table->string('is_active')->default(true);
             $table->softDeletes();
             $table->timestamps();
 

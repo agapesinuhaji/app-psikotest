@@ -15,35 +15,17 @@ class UsersTable
     public static function configure(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn ($query) => 
+                $query->where('is_admin', true)
+            )
             ->columns([
                 TextColumn::make('name')
                     ->searchable(),
                 TextColumn::make('email')
                     ->label('Email address')
                     ->searchable(),
-                TextColumn::make('email_verification_at')
-                    ->dateTime()
-                    ->sortable(),
-                TextColumn::make('username')
-                    ->searchable(),
-                TextColumn::make('place_of_birth')
-                    ->searchable(),
-                TextColumn::make('date_of_birth')
-                    ->date()
-                    ->sortable(),
-                TextColumn::make('age')
-                    ->numeric()
-                    ->sortable(),
-                TextColumn::make('gender')
-                    ->searchable(),
-                TextColumn::make('last_education')
-                    ->searchable(),
                 TextColumn::make('phone')
                     ->searchable(),
-                TextColumn::make('photo')
-                    ->searchable(),
-                IconColumn::make('is_admin')
-                    ->boolean(),
                 TextColumn::make('status')
                     ->searchable(),
                 TextColumn::make('deleted_at')
@@ -58,9 +40,6 @@ class UsersTable
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('batch_id')
-                    ->numeric()
-                    ->sortable(),
             ])
             ->filters([
                 //
