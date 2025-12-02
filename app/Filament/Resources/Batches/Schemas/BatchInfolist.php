@@ -1,0 +1,132 @@
+<?php
+
+namespace App\Filament\Resources\Batches\Schemas;
+
+use Filament\Actions\Action;
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Actions;
+use Filament\Schemas\Components\Section;
+use Filament\Infolists\Components\TextEntry;
+use Filament\Infolists\Components\RepeatableEntry;
+
+class BatchInfolist
+{
+    public static function configure(Schema $schema): Schema
+    {
+        return $schema->components([
+
+            /*
+            |--------------------------------------------------------------------------
+            | Batch Information
+            |--------------------------------------------------------------------------
+            */
+            Section::make('Batch Information')
+                ->schema([
+                    TextEntry::make('name'),
+                    TextEntry::make('status'),
+                    TextEntry::make('start_time')->dateTime(),
+                    TextEntry::make('end_time')->dateTime(),
+                ])
+                ->columns(2)
+                ->columnSpanFull(),
+
+            /*
+            |--------------------------------------------------------------------------
+            | Users List + Generate All Button
+            |--------------------------------------------------------------------------
+            */
+            Section::make('')
+                ->schema([
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | BUTTON: Generate Soal Untuk Semua User
+                    |--------------------------------------------------------------------------
+                    */
+                    Actions::make([
+                        Action::make('generateAll')
+                            ->label('Generate Soal Semua User')
+                            ->button()
+                            ->color('primary')
+                            ->icon('heroicon-o-bolt')
+                            ->requiresConfirmation()
+                            ->action(function ($record) {
+
+                                // Ambil semua user dalam batch
+                                $users = $record->users;
+                                $userIds = $users->pluck('id');
+
+                                // Hapus dulu semua soal user dalam batch ini
+                                \App\Models\ClientQuestion::whereIn('user_id', $userIds)->delete();
+
+                                // Ambil semua soal
+                                $questions = \App\Models\Question::pluck('id')->toArray();
+
+                                foreach ($users as $user) {
+
+                                    // Acak soal untuk user ini
+                                    $shuffled = $questions;
+                                    shuffle($shuffled);
+
+                                    foreach ($shuffled as $order => $questionId) {
+                                        \App\Models\ClientQuestion::updateOrCreate(
+                                            [
+                                                'user_id' => $user->id,
+                                                'question_id' => $questionId,
+                                            ],
+                                            [
+                                                'order' => $order + 1,
+                                            ]
+                                        );
+                                    }
+                                }
+
+                                \Filament\Notifications\Notification::make()
+                                    ->title('Berhasil generate ulang soal semua user!')
+                                    ->success()
+                                    ->send();
+                            }),
+                    ])
+                    ->columnSpanFull(),
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | REPEATABLE ENTRY: LIST USERS
+                    |--------------------------------------------------------------------------
+                    */
+                    RepeatableEntry::make('users')
+                        ->schema([
+                            Section::make()
+                                ->schema([
+
+                                    TextEntry::make('name')
+                                        ->label('Name'),
+
+                                    TextEntry::make('username')
+                                        ->label('Username'),
+
+                                    TextEntry::make('plain_password')
+                                        ->label('Password'),
+
+                                    TextEntry::make('birth')
+                                        ->label('Place, Date of Birth')
+                                        ->state(fn ($record) =>
+                                            $record->place_of_birth . ', ' .
+                                            \Carbon\Carbon::parse($record['date_of_birth'])->format('d M Y')
+                                        ),
+
+
+                                    TextEntry::make('age')
+                                        ->label('Age'),
+
+                                    TextEntry::make('last_education')
+                                        ->label('Last Education'),
+                                ])
+                                ->columns(4),
+                        ])
+                        ->columnSpanFull(),
+                ])
+                ->columnSpanFull(),
+        ]);
+    }
+}
