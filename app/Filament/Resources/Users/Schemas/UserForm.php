@@ -2,12 +2,10 @@
 
 namespace App\Filament\Resources\Users\Schemas;
 
-use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\DateTimePicker;
-use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Textarea;
-use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Schema;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\FileUpload;
 
 class UserForm
 {
@@ -16,32 +14,71 @@ class UserForm
         return $schema
             ->components([
                 TextInput::make('name')
-                    ->required(),
+                    ->required()
+                    ->disabled(fn ($context, $record) =>
+                        $context === 'edit' && auth()->user()->role === 'admin'
+                    ),
                 TextInput::make('email')
                     ->label('Email address')
                     ->email()
-                    ->required(),
-                DateTimePicker::make('email_verification_at'),
-                TextInput::make('username'),
+                    ->required()
+                    ->disabled(fn ($context, $record) =>
+                        $context === 'edit' && auth()->user()->role === 'admin'
+                    ),
                 TextInput::make('password')
                     ->password()
-                    ->required(),
-                TextInput::make('place_of_birth'),
-                DatePicker::make('date_of_birth'),
-                TextInput::make('age')
-                    ->numeric(),
-                TextInput::make('gender'),
-                TextInput::make('last_education'),
+                    ->confirmed()
+                    ->required(fn ($context) => $context === 'create')
+                    ->revealable()
+                    ->dehydrated(fn ($state) => filled($state))
+                    ->disabled(fn ($context, $record) =>
+                        $context === 'edit' && auth()->user()->role === 'admin'
+                    ),
+
+                TextInput::make('password_confirmation')
+                    ->label('Confirmation Password')
+                    ->password()
+                    ->required(fn ($context) => $context === 'create') // hanya required saat create
+                    ->revealable()
+                    ->dehydrated(false)
+                    ->same('password')
+                    ->disabled(fn ($context, $record) =>
+                        $context === 'edit' && auth()->user()->role === 'admin'
+                    ),
                 TextInput::make('phone')
-                    ->tel(),
-                Textarea::make('address')
-                    ->columnSpanFull(),
-                TextInput::make('photo'),
-                Toggle::make('is_admin')
-                    ->required(),
-                TextInput::make('status'),
-                TextInput::make('batch_id')
-                    ->numeric(),
+                    ->tel()
+                    ->disabled(fn ($context, $record) =>
+                        $context === 'edit' && auth()->user()->role === 'admin'
+                    ),
+                TextInput::make('address')
+                    ->disabled(fn ($context, $record) =>
+                        $context === 'edit' && auth()->user()->role === 'admin'
+                    ),
+                FileUpload::make('photo')
+                    ->label('Photo')
+                    ->image() // hanya izinkan file gambar
+                    ->directory('user') // folder penyimpanan (opsional)
+                    ->maxSize(2048) // batas ukuran 2MB (opsional)
+                    ->imageEditor() // aktifkan editor crop/rotate (opsional)
+                    ->disabled(fn ($context, $record) =>
+                        $context === 'edit' && auth()->user()->role === 'admin'
+                    ),
+                Select::make('is_admin')
+                    ->label('Role')
+                    ->options([
+                        '1' => 'Admin',
+                    ])
+                    ->required()
+                    ->default('1'),
+                Select::make('status')
+                    ->label('Status')
+                    ->options([
+                        'active' => 'Active',
+                        'inactive' => 'Inactive',
+                    ])
+                    ->required()
+                    ->default('active')
+                    ->native(false), // agar tampilannya lebih modern (optional)
             ]);
     }
 }

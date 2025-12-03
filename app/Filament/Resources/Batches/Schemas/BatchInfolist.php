@@ -32,39 +32,44 @@ class BatchInfolist
 
             /*
             |--------------------------------------------------------------------------
-            | Users List + Generate All Button
+            | Users List + Start Batch Button
             |--------------------------------------------------------------------------
             */
             Section::make('')
                 ->schema([
 
-                    /*
-                    |--------------------------------------------------------------------------
-                    | BUTTON: Generate Soal Untuk Semua User
-                    |--------------------------------------------------------------------------
-                    */
                     Actions::make([
-                        Action::make('generateAll')
-                            ->label('Generate Soal Semua User')
+                        Action::make('startBatch')
+                            ->label('Mulai Batch')
                             ->button()
-                            ->color('primary')
-                            ->icon('heroicon-o-bolt')
+                            ->color('success')
+                            ->icon('heroicon-o-play')
+
+                            // Tombol hanya muncul jika status bukan "standby"
+                            ->visible(fn ($record) => $record->status == 'standby')
+
                             ->requiresConfirmation()
                             ->action(function ($record) {
 
-                                // Ambil semua user dalam batch
+                                // ===============================
+                                // 1. Ambil semua user dalam batch
+                                // ===============================
                                 $users = $record->users;
                                 $userIds = $users->pluck('id');
 
-                                // Hapus dulu semua soal user dalam batch ini
+                                // ===============================
+                                // 2. Hapus soal lama user
+                                // ===============================
                                 \App\Models\ClientQuestion::whereIn('user_id', $userIds)->delete();
 
-                                // Ambil semua soal
+                                // Ambil semua bank soal
                                 $questions = \App\Models\Question::pluck('id')->toArray();
 
+                                // ===============================
+                                // 3. Generate ulang soal + random order
+                                // ===============================
                                 foreach ($users as $user) {
 
-                                    // Acak soal untuk user ini
                                     $shuffled = $questions;
                                     shuffle($shuffled);
 
@@ -81,8 +86,36 @@ class BatchInfolist
                                     }
                                 }
 
+                                // ===============================
+                                // 4. Generate client_tests KOSONG
+                                // ===============================
+                                foreach ($users as $user) {
+                                    \App\Models\ClientTest::updateOrCreate(
+                                        [
+                                            'user_id' => $user->id,
+                                        ],
+                                        [
+                                            'spm_start_at' => null,
+                                            'spm_end_at' => null,
+                                            'papikostick_start_at' => null,
+                                            'papikostick_end_at' => null,
+                                        ]
+                                    );
+                                }
+
+                                // ===============================
+                                // 5. Ubah status batch menjadi "open"
+                                // ===============================
+                                $record->update([
+                                    'status' => 'open',
+                                ]);
+
+                                // ===============================
+                                // 6. Notifikasi
+                                // ===============================
                                 \Filament\Notifications\Notification::make()
-                                    ->title('Berhasil generate ulang soal semua user!')
+                                    ->title('Batch berhasil dimulai!')
+                                    ->body('Soal berhasil digenerate dan data client_test sudah disiapkan.')
                                     ->success()
                                     ->send();
                             }),
@@ -99,14 +132,9 @@ class BatchInfolist
                             Section::make()
                                 ->schema([
 
-                                    TextEntry::make('name')
-                                        ->label('Name'),
-
-                                    TextEntry::make('username')
-                                        ->label('Username'),
-
-                                    TextEntry::make('plain_password')
-                                        ->label('Password'),
+                                    TextEntry::make('name')->label('Name'),
+                                    TextEntry::make('username')->label('Username'),
+                                    TextEntry::make('plain_password')->label('Password'),
 
                                     TextEntry::make('birth')
                                         ->label('Place, Date of Birth')
@@ -115,12 +143,8 @@ class BatchInfolist
                                             \Carbon\Carbon::parse($record['date_of_birth'])->format('d M Y')
                                         ),
 
-
-                                    TextEntry::make('age')
-                                        ->label('Age'),
-
-                                    TextEntry::make('last_education')
-                                        ->label('Last Education'),
+                                    TextEntry::make('age')->label('Age'),
+                                    TextEntry::make('last_education')->label('Last Education'),
                                 ])
                                 ->columns(4),
                         ])

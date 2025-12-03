@@ -19,6 +19,7 @@ class TypeQuestionsTable
                 TextColumn::make('name')
                     ->searchable(),
                 ImageColumn::make('photo')
+                    ->disk('public')
                     ->label('Photo')
                     ->size(60),
                 TextColumn::make('created_at')

@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class TypeQuestion extends Model
 {
-    protected $fillable = ['name', 'photo'];
+    protected $fillable = ['name', 'photo', 'duration', 'description', 'status'];
 
     public function questions()
     {

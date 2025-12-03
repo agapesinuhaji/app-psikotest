@@ -31,6 +31,7 @@ class User extends Authenticatable implements FilamentUser
         'gender',
         'last_education',
         'age',
+        'is_admin',
     ];
 
     /**
@@ -52,7 +53,6 @@ class User extends Authenticatable implements FilamentUser
     {
         return [
             'email_verified_at' => 'datetime',
-            'password' => 'hashed',
         ];
     }
 
@@ -66,21 +66,15 @@ class User extends Authenticatable implements FilamentUser
     {
         static::creating(function ($user) {
 
-            // -------------------------------------------------
-            // 1. Hitung umur (jika ada date_of_birth)
-            // -------------------------------------------------
+            // 1. Hitung umur
             if (!empty($user->date_of_birth)) {
                 $user->age = \Carbon\Carbon::parse($user->date_of_birth)->age;
             }
 
-            // -------------------------------------------------
-            // 2. Generate Username OTOMATIS
-            // Format: MMDD + batch_id + 4-digit microtime + 3-digit random
-            // Contoh: 1201 3 8394 142
-            // -------------------------------------------------
+            // 2. Generate Username Otomatis
             $batchId = $user->batch_id ?? 0;
 
-            $date = now()->format('md'); // MMDD
+            $date = now()->format('md'); 
             $micro = microtime(true);
             $microDigits = preg_replace('/\D/', '', $micro);
             $microSegment = substr($microDigits, -4);
@@ -89,24 +83,44 @@ class User extends Authenticatable implements FilamentUser
             $username = "{$date}{$batchId}{$microSegment}{$random}";
             $user->username = $username;
 
-            // -------------------------------------------------
-            // 3. Email Generator (khusus user non-admin)
-            // email = username@example.com
-            // -------------------------------------------------
+            // 3. Email otomatis (jika kosong)
             if (empty($user->email)) {
                 $user->email = $username . '@example.com';
             }
 
-            // -------------------------------------------------
-            // 4. Generate Password Otomatis
-            // password acak 8 karakter ⇒ disimpan di plain_password
-            // -------------------------------------------------
-            $plainPassword = self::generateRandomPassword(8);
+            // ------------------------------------------------------
+            // 4. PASSWORD BERDASARKAN ROLE
+            // ------------------------------------------------------
 
-            $user->plain_password = $plainPassword;  // bisa dipakai untuk kirim notifikasi
-            $user->password = bcrypt($plainPassword);
+            // Jika USER biasa (bukan admin)
+            if ($user->is_admin != 1) {
+
+                // generate password otomatis
+                $plainPassword = self::generateRandomPassword(8);
+
+                // simpan plain password
+                $user->plain_password = $plainPassword;
+
+                // hash untuk database
+                $user->password = bcrypt($plainPassword);
+
+            } 
+            // Jika ADMIN → password dari input, tidak diubah
+            else {
+
+                // pastikan password sudah ada dan tinggal hash
+                if (!empty($user->password)) {
+                    // generate password otomatis
+                    $plainPassword = self::generateRandomPassword(8);
+
+                    // simpan plain password
+                    $user->plain_password = $plainPassword;
+                    $user->password = bcrypt($user->password);
+                }
+            }
         });
     }
+
 
     /**
      * Generator password acak

@@ -14,7 +14,7 @@
     <!-- Scripts -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     
-    {{-- CSS ANIMASI BLOB (PENTING untuk Background Bergerak) --}}
+    {{-- CSS ANIMASI BLOB --}}
     <style>
         @keyframes blob-move {
             0% { transform: translate(0, 0) scale(1); }
@@ -30,44 +30,56 @@
         }
     </style>
 </head>
-<body class="font-sans text-[#1b1b18] dark:text-[#EDEDEC] antialiased">
-    
-    {{-- 1. BAGIAN BACKGROUND BERGERAK (Floating Blob) --}}
-    <div class="absolute inset-0 z-0 opacity-40 dark:opacity-20 pointer-events-none bg-[#FDFDFC] dark:bg-[#0a0a0a]">
-        
-        {{-- Blob 1 (Biru/Ungu) --}}
-        <div class="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-[blob-move_15s_ease-in-out_infinite_alternate] starting:opacity-0" 
+
+<body class="font-sans text-[#1b1b18] antialiased bg-[#FDFDFC]">
+
+    {{-- 1. BACKGROUND ANIMASI --}}
+    <div class="absolute inset-0 z-0 opacity-40 pointer-events-none">
+
+        {{-- Blob 1 --}}
+        <div class="absolute top-1/4 left-1/4 w-[500px] h-[500px] 
+                    bg-blue-500 rounded-full mix-blend-multiply 
+                    filter blur-3xl opacity-70 
+                    animate-[blob-move_15s_ease-in-out_infinite_alternate]"
              style="animation-delay: 1s;">
         </div>
 
-        {{-- Blob 2 (Pink/Fuchsia) --}}
-        <div class="absolute bottom-1/4 right-1/4 w-[600px] h-[600px] bg-fuchsia-500 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-[blob-move-2_18s_ease-in-out_infinite_alternate] starting:opacity-0" 
+        {{-- Blob 2 --}}
+        <div class="absolute bottom-1/4 right-1/4 w-[600px] h-[600px] 
+                    bg-fuchsia-500 rounded-full mix-blend-multiply 
+                    filter blur-3xl opacity-70
+                    animate-[blob-move-2_18s_ease-in-out_infinite_alternate]"
              style="animation-delay: 2s;">
         </div>
-        
+
     </div>
-    
-    {{-- 2. Wraper Konten (Di atas background) --}}
+
+    {{-- 2. WRAPPER KONTEN --}}
     <div class="min-h-screen flex flex-col sm:justify-center items-center pt-6 sm:pt-0 relative z-10">
-        
-        {{-- Logo Aplikasi di Atas Card --}}
+
+        {{-- Logo --}}
         <div class="mb-4">
             <a href="/" class="flex flex-col items-center">
-                {{-- Kustomisasi Logo Agar Serasi dengan Tema Baru --}}
-                <div class="w-16 h-16 flex items-center justify-center rounded-full bg-blue-600/10 dark:bg-blue-300/10 p-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-full h-full text-blue-600 dark:text-blue-300">
-                        <path fill-rule="evenodd" d="M2.25 6a3 3 0 013-3h15.75a3 3 0 013 3v12a3 3 0 01-3 3H5.25a3 3 0 01-3-3V6zm3.902 3.75a.75.75 0 00-.53.22L3 13.5l1.623 1.622a.75.75 0 001.06-.002L9.75 12l4.603 4.603a.75.75 0 101.06-1.06L10.811 10.5l4.689-4.689a.75.75 0 00-1.06-1.06L9.75 9.444 5.756 5.449a.75.75 0 00-1.06 1.06L8.434 10.5l-4.242 4.242a.75.75 0 00.53 1.288z" clip-rule="evenodd" />
+                <div class="w-16 h-16 flex items-center justify-center rounded-full bg-blue-600/10 p-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"
+                         class="w-full h-full text-blue-600">
+                        <path fill-rule="evenodd"
+                            d="M2.25 6a3 3 0 013-3h15.75a3 3 0 013 3v12a3 3 0 01-3 3H5.25a3 3 0 01-3-3V6zm3.902 3.75a.75.75 0 00-.53.22L3 13.5l1.623 1.622a.75.75 0 001.06-.002L9.75 12l4.603 4.603a.75.75 0 101.06-1.06L10.811 10.5l4.689-4.689a.75.75 0 00-1.06-1.06L9.75 9.444 5.756 5.449a.75.75 0 00-1.06 1.06L8.434 10.5l-4.242 4.242a.75.75 0 00.53 1.288z"
+                            clip-rule="evenodd" />
                     </svg>
                 </div>
             </a>
         </div>
 
-        {{-- Card Konten (Glassmorphism) --}}
+        {{-- Card --}}
         <div class="w-full sm:max-w-md px-6 py-8 
-                    bg-white/60 dark:bg-[#161615]/70 backdrop-blur-lg 
-                    shadow-2xl overflow-hidden rounded-xl border border-white/40 dark:border-black/40">
+                    bg-white/60 backdrop-blur-lg 
+                    shadow-2xl overflow-hidden rounded-xl 
+                    border border-white/40">
             {{ $slot }}
         </div>
+
     </div>
+
 </body>
 </html>

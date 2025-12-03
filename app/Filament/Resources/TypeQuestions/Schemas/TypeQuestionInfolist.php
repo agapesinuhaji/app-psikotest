@@ -4,9 +4,8 @@ namespace App\Filament\Resources\TypeQuestions\Schemas;
 
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components\Grid;
-use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
-use Filament\Infolists\Components\IconEntry;
+use Filament\Tables\Columns\ImageColumn;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\ImageEntry;
 
@@ -25,14 +24,30 @@ class TypeQuestionInfolist
                         Grid::make(1)
                             ->schema([
                                 TextEntry::make('name')
-                                    ->size('xl')     // lebih besar
-                                    ->weight('bold')  // tebal
+                                    ->size('xl')         // lebih besar
+                                    ->weight('bold')     // tebal
                                     ->alignStart(),
+
                                 ImageEntry::make('photo')
+                                    ->disk('public')
                                     ->width(120)
                                     ->alignStart(),
+
+
+                                // Tambahan baru
+                                TextEntry::make('duration')
+                                    ->label('Durasi (menit)')
+                                    ->numeric()
+                                    ->default(60),
+
+                                TextEntry::make('description')
+                                    ->label('Deskripsi'),
+
+                                TextEntry::make('status')
+                                    ->label('status'),
                             ]),
                     ]),
+
 
                 // GRID 2
                 Section::make('Informasi Waktu')

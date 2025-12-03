@@ -18,7 +18,7 @@ return new class extends Migration
             $table->time('start_time')->nullable();
             $table->time('end_time')->nullable();
             $table->string('reporting_pdf')->nullable();
-            $table->string('status')->nullable();
+            $table->string('status')->default('standby');
             $table->softDeletes();
             $table->timestamps();
         });

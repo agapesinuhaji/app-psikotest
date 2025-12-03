@@ -29,12 +29,35 @@ class TypeQuestionForm
                                     ->image()
                                     ->directory('type-questions')
                                     ->imageEditor()
+                                    ->disk('public')
                                     ->maxSize(2048),
+
+                                // Tambahan baru dari migration
+                                TextInput::make('duration')
+                                    ->label('Durasi (menit)')
+                                    ->numeric()
+                                    ->default(0)
+                                    ->required(),
+
+                                TextInput::make('description')
+                                    ->label('Deskripsi')
+                                    ->maxLength(500)
+                                    ->nullable(),
+
+                                Select::make('status')
+                                    ->label('Status')
+                                    ->options([
+                                        'active' => 'Active',
+                                        'inactive' => 'Inactive',
+                                    ])
+                                    ->default('active')
+                                    ->required(),
                             ]),
                     ])
                     ->columnSpanFull()
                     ->collapsible()
                     ->collapsed(false),
+
 
                 Repeater::make('questions')
                     ->label('List Of Questions')
