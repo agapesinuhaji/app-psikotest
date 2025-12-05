@@ -19,6 +19,7 @@ class CorporateIdentityInfolist
                 TextEntry::make('address'),
                 ImageEntry::make('logo')
                     ->label('Logo')
+                    ->disk('public')
                     ->height(150)
                     ->circular(), // opsional
                 

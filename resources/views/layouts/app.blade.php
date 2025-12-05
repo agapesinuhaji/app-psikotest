@@ -28,6 +28,7 @@
             100% { transform: translate(0, 0) scale(1); }
         }
     </style>
+    @livewireStyles
 </head>
 <body class="font-sans antialiased relative">
     
@@ -69,5 +70,6 @@
             {{ $slot }}
         </main>
     </div>
+    @livewireScripts
 </body>
 </html>

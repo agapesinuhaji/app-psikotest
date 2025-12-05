@@ -9,10 +9,15 @@ class ClientTest extends Model
 {
     use SoftDeletes;
 
-    protected $table = 'client_tests';
-
     protected $fillable = [
         'user_id',
+        'spm_start_at',
+        'spm_end_at',
+        'papikostick_start_at',
+        'papikostick_end_at',
+    ];
+
+    protected $dates = [
         'spm_start_at',
         'spm_end_at',
         'papikostick_start_at',

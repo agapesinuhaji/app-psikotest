@@ -29,9 +29,9 @@ class BatchForm
                         Select::make('status')
                             ->label('Status')
                             ->options([
-                                'open'   => 'Open',
-                                'closed' => 'Closed',
+                                'standby' => 'Stand By',
                             ])
+                            ->default('standby')
                             ->required(),
 
                         DateTimePicker::make('start_time')

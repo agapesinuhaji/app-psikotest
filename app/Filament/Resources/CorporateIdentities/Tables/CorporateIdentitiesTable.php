@@ -17,6 +17,7 @@ class CorporateIdentitiesTable
                 TextColumn::make('name'),   
                 ImageColumn::make('logo')
                     ->label('Logo')
+                    ->disk('public')
                     ->square()
                     ->size(60),
                 TextColumn::make('psikolog'),

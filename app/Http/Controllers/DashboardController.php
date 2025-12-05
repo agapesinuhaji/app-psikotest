@@ -12,9 +12,18 @@ class DashboardController extends Controller
         // Ambil data client_test milik user yang sedang login
         $clientTest = ClientTest::where('user_id', auth()->id())->first();
 
-        $typeQuestions = \App\Models\TypeQuestion::where('status', 'active')->get();
+        $spm = \App\Models\TypeQuestion::where('status', 'active')
+                ->where('slug', 'spm')
+                ->get();
 
 
-        return view('dashboard', compact('clientTest', 'typeQuestions'));
+        $papiKostick = \App\Models\TypeQuestion::where('status', 'active')
+            ->where('slug', 'papi-kostick')
+            ->get();
+
+     
+
+
+        return view('dashboard', compact('clientTest', 'spm', 'papiKostick'));
     }
 }

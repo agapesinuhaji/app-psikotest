@@ -55,11 +55,34 @@
 
     <main class="relative z-10 flex flex-col items-center justify-center p-8 text-center max-w-2xl bg-white/60 backdrop-blur-lg rounded-2xl shadow-2xl border border-white/40 transition-opacity duration-750 opacity-100">
 
-        <div class="mb-4 w-16 h-16 flex items-center justify-center rounded-full bg-blue-600/10 p-2">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-full h-full text-blue-600">
-                <path fill-rule="evenodd" d="M2.25 6a3 3 0 013-3h15.75a3 3 0 013 3v12a3 3 0 01-3 3H5.25a3 3 0 01-3-3V6zm3.902 3.75a.75.75 0 00-.53.22L3 13.5l1.623 1.622a.75.75 0 001.06-.002L9.75 12l4.603 4.603a.75.75 0 101.06-1.06L10.811 10.5l4.689-4.689a.75.75 0 00-1.06-1.06L9.75 9.444 5.756 5.449a.75.75 0 00-1.06 1.06L8.434 10.5l-4.242 4.242a.75.75 0 00.53 1.288z" clip-rule="evenodd" />
-            </svg>
+        @php
+            use App\Models\CorporateIdentity;
+
+            // Ambil record pertama
+            $identity = CorporateIdentity::first();
+
+            // Ambil path logo dari database
+            $logo = optional($identity)->logo;
+        @endphp
+
+        <div class="logo-container">
+            @if ($logo)
+                {{-- Jika logo ada di database --}}
+                <img 
+                    src="{{ asset('storage/' . $logo) }}" 
+                    alt="Logo Perusahaan" 
+                    class="mb-4 w-32 h-32 rounded-full "
+                >
+            @else
+                {{-- Jika logo NULL → tampilkan SVG fallback --}}
+                <div class="mb-4 w-16 h-16 flex items-center justify-center rounded-full bg-blue-600/10 p-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-full h-full text-blue-600">
+                        <path fill-rule="evenodd" d="M2.25 6a3 3 0 013-3h15.75a3 3 0 013 3v12a3 3 0 01-3 3H5.25a3 3 0 01-3-3V6zm3.902 3.75a.75.75 0 00-.53.22L3 13.5l1.623 1.622a.75.75 0 001.06-.002L9.75 12l4.603 4.603a.75.75 0 101.06-1.06L10.811 10.5l4.689-4.689a.75.75 0 00-1.06-1.06L9.75 9.444 5.756 5.449a.75.75 0 00-1.06 1.06L8.434 10.5l-4.242 4.242a.75.75 0 00.53 1.288z" clip-rule="evenodd" />
+                    </svg>
+                </div>
+            @endif
         </div>
+
 
         <h1 class="mb-2 text-4xl lg:text-3xl font-extrabold tracking-tight text-[#1b1b18]">
             {{ config('app.name', 'PEXRA ANALYTICS') }}

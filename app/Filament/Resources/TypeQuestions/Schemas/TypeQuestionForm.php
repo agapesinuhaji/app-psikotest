@@ -23,7 +23,22 @@ class TypeQuestionForm
                         Grid::make(1)
                             ->schema([
                                 TextInput::make('name')
-                                    ->required(),
+                                    ->required()
+                                    ->reactive()
+                                    ->afterStateUpdated(function ($state, callable $set) {
+                                        $set('slug', \Illuminate\Support\Str::slug($state));
+                                    }),
+
+                                TextInput::make('slug')
+                                    ->hidden()
+                                    ->dehydrated()
+                                    ->required()
+                                    ->default(fn ($get) => \Illuminate\Support\Str::slug($get('name')))
+                                    ->afterStateHydrated(function ($state, $get, $set) {
+                                        if (! $state) {
+                                            $set('slug', \Illuminate\Support\Str::slug($get('name')));
+                                        }
+                                    }),
 
                                 FileUpload::make('photo')
                                     ->image()

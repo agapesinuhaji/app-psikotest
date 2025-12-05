@@ -17,6 +17,7 @@ class CorporateIdentityForm
                 TextInput::make('psikolog'),
                 FileUpload::make('logo')
                     ->label('Logo')
+                    ->disk('public')
                     ->image()                // hanya perbolehkan file gambar
                     ->directory('corporate-identity')     // folder penyimpanan
                     ->imageEditor()          // aktifkan editor gambar bawaan (crop, resize, dll)
