@@ -15,8 +15,12 @@
                 <ul class="text-gray-700 list-disc ml-6 mb-4">
                     <li>Waktu berjalan otomatis</li>
                     <li>Dilarang menutup / refresh halaman</li>
-                    <li>Dilarang berpindah tab</li>
+                    <li>Dilarang berpindah tab</li> 
                 </ul>
+
+                <p class="text-gray-700 leading-relaxed mb-4">
+                    Apabila terdeteksi melanggar aturan maka ujian akan otomatis berakhir.
+                </p>
 
                 {{-- FIX: hanya 1 wire:click --}}
                 <button
@@ -33,7 +37,7 @@
     {{-- MAIN WRAPPER --}}
     <div class="{{ $showPopup ? 'blur-sm pointer-events-none select-none' : '' }}">
 
-        <div class="max-w-2xl mx-auto mt-10 p-6 bg-white shadow-xl rounded-xl">
+        <div class="max-w-5xl mx-auto mt-10 p-8 bg-white shadow-xl rounded-xl">
 
             {{-- TIMER --}}
             <div class="text-right text-red-600 font-bold text-xl mb-4" wire:ignore>
@@ -49,22 +53,27 @@
             </div>
 
             {{-- PERTANYAAN --}}
-            <p class="text-xl text-gray-800 mb-6 leading-relaxed">
+            <p class="text-xl text-gray-800 mb-3 leading-relaxed">
                 {!! $question->question !!}
             </p>
 
             {{-- OPSI --}}
-            <div class="grid grid-cols-1 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 @foreach($question->options as $opt)
                     <button
                         wire:click="selectOption({{ $opt->id }})"
                         class="w-full p-4 border rounded-lg font-medium transition
-                               hover:scale-105 hover:shadow-lg
-                               {{ $selectedOption == $opt->id
-                                   ? 'bg-blue-600 text-white border-blue-700'
-                                   : 'bg-gray-100 text-gray-800 border-gray-300' }}">
-                        {!! $opt->option !!}
+                            hover:scale-105 hover:shadow-lg
+                            {{ $selectedOption == $opt->id
+                                ? 'bg-blue-600 text-white border-blue-700'
+                                : 'bg-gray-100 text-gray-800 border-gray-300' }}">
+                        
+                        <div class="option-content text-center">
+                            {!! $opt->option !!}
+                        </div>
+
                     </button>
+
                 @endforeach
             </div>
 

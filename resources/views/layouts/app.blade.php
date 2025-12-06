@@ -4,8 +4,19 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    @php
+        $corp = \App\Models\CorporateIdentity::first();
+    @endphp
 
-    <title>{{ config('app.name', 'Laravel') }}</title>
+    @if($corp && $corp->logo)
+        <link rel="icon" href="{{ asset('storage/' . $corp->logo) }}" type="image/png">
+    @else
+        <link rel="icon" href="/favicon.ico" type="image/x-icon">
+    @endif
+
+    <title>{{ config('app.name', 'Laravel') }}</title>  
+
+    <!-- Ganti dengan logo dari DB -->
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.bunny.net">

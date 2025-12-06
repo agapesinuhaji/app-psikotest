@@ -6,7 +6,15 @@
                 <!-- Logo -->
                 <div class="shrink-0 flex items-center">
                     <a href="{{ route('dashboard') }}">
-                        <x-application-logo class="block h-9 w-auto fill-current text-gray-800" />
+                        @php
+                            $corp = \App\Models\CorporateIdentity::first();
+                        @endphp
+
+                        @if($corp && $corp->logo)
+                            <img src="{{ asset('storage/' . $corp->logo) }}" alt="Logo" class="block h-12 w-auto">
+                        @else
+                            <x-application-logo class="block h-9 w-auto" />
+                        @endif
                     </a>
                 </div>
 
