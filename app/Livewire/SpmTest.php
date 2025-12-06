@@ -28,13 +28,14 @@ class SpmTest extends Component
     {
         $userId = Auth::id();
 
-        $this->clientTest = ClientTest::firstOrCreate(
-            ['user_id' => $userId],
-            ['spm_start_at' => now()]
-        );
+        $this->clientTest = ClientTest::where('user_id', $userId)->first();
 
+        if (!$this->clientTest || !$this->clientTest->can_access) { 
+            abort(403, 'Anda belum memiliki akses ujian.');
+        }
+
+        // Lanjutkan inisialisasi soal jika akses ada
         $type = TypeQuestion::where('slug', 'spm')->firstOrFail();
-
         $this->questions = Question::where('type_question_id', $type->id)
             ->with('options')
             ->orderBy('id')
@@ -44,6 +45,7 @@ class SpmTest extends Component
             abort(404, "Soal SPM kosong!");
         }
     }
+
 
     public function startTest()
     {
@@ -73,6 +75,8 @@ class SpmTest extends Component
         $current = $this->questions[$this->currentIndex];
         $option = Option::findOrFail($this->selectedOption);
 
+        $isCorrect = $option->value == 1; // otomatis benar/salah
+
         ClientQuestion::updateOrCreate(
             [
                 'user_id' => Auth::id(),
@@ -80,7 +84,8 @@ class SpmTest extends Component
             ],
             [
                 'option_id' => $option->id,
-                'score' => $option->value,
+                'score' => $option->value,   // 1 untuk benar, 0 untuk salah
+                'is_correct' => $isCorrect,  // simpan kebenaran jawaban
                 'is_active' => 1
             ]
         );
@@ -97,6 +102,7 @@ class SpmTest extends Component
             $this->finishTest();
         }
     }
+
 
     public function finishTest()
     {

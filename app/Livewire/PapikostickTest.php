@@ -29,10 +29,16 @@ class PapikostickTest extends Component
     {
         $userId = Auth::id();
 
+        // Ambil atau buat clientTest
         $this->clientTest = ClientTest::firstOrCreate(
             ['user_id' => $userId],
             ['papikostick_start_at' => now()]
         );
+
+        // === Cek akses user ===
+        if (!$this->clientTest->can_access_papikostick) {
+            abort(403, 'Anda belum memiliki akses ujian Papikostick.');
+        }
 
         $type = TypeQuestion::where('slug', 'papi-kostick')->firstOrFail();
 
@@ -45,6 +51,7 @@ class PapikostickTest extends Component
             abort(404, "Soal Papikostick kosong!");
         }
     }
+
 
     public function startTest()
     {

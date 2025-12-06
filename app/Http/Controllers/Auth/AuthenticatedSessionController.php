@@ -26,10 +26,21 @@ class AuthenticatedSessionController extends Controller
     {
         $request->authenticate();
 
+        $user = $request->user();
+
+        // Cek apakah user aktif
+        if (!$user->is_active) {
+            Auth::logout();
+            return back()->withErrors([
+                'username' => __('auth.failed') // pesan gagal login biasa
+            ]);
+        }
+
         $request->session()->regenerate();
 
         return redirect()->intended(route('dashboard', absolute: false));
     }
+
 
     /**
      * Destroy an authenticated session.
