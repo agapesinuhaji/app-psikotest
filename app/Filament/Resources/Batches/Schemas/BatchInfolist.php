@@ -4,8 +4,10 @@ namespace App\Filament\Resources\Batches\Schemas;
 
 use Filament\Actions\Action;
 use Filament\Schemas\Schema;
+use App\Services\SPMResultService;
 use Filament\Schemas\Components\Actions;
 use Filament\Schemas\Components\Section;
+use App\Services\PapikostickResultService;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\RepeatableEntry;
 
@@ -16,9 +18,9 @@ class BatchInfolist
         return $schema->components([
 
             /*
-            |--------------------------------------------------------------------------
+            |----------------------------------------------------------------------
             | Batch Information
-            |--------------------------------------------------------------------------
+            |----------------------------------------------------------------------
             */
             Section::make('Batch Information')
                 ->schema([
@@ -31,45 +33,36 @@ class BatchInfolist
                 ->columnSpanFull(),
 
             /*
-            |--------------------------------------------------------------------------
-            | Users List + Start Batch Button
-            |--------------------------------------------------------------------------
+            |----------------------------------------------------------------------
+            | Users List + Start / End Batch / Proses Hasil Buttons
+            |----------------------------------------------------------------------
             */
             Section::make('')
                 ->schema([
 
                     Actions::make([
+                        // ===========================
+                        // Tombol Mulai Batch
+                        // ===========================
                         Action::make('startBatch')
                             ->label('Mulai Batch')
                             ->button()
                             ->color('success')
                             ->icon('heroicon-o-play')
-
-                            // Tombol hanya muncul jika status bukan "standby"
                             ->visible(fn ($record) => $record->status == 'standby')
-
                             ->requiresConfirmation()
                             ->action(function ($record) {
-
-                                // ===============================
-                                // 1. Ambil semua user dalam batch
-                                // ===============================
                                 $users = $record->users;
                                 $userIds = $users->pluck('id');
 
-                                // ===============================
-                                // 2. Hapus soal lama user
-                                // ===============================
+                                // Hapus soal lama
                                 \App\Models\ClientQuestion::whereIn('user_id', $userIds)->delete();
 
                                 // Ambil semua bank soal
                                 $questions = \App\Models\Question::pluck('id')->toArray();
 
-                                // ===============================
-                                // 3. Generate ulang soal + random order
-                                // ===============================
+                                // Generate ulang soal untuk setiap user
                                 foreach ($users as $user) {
-
                                     $shuffled = $questions;
                                     shuffle($shuffled);
 
@@ -86,9 +79,7 @@ class BatchInfolist
                                     }
                                 }
 
-                                // ===============================
-                                // 4. Generate client_tests KOSONG
-                                // ===============================
+                                // Generate client_tests kosong
                                 foreach ($users as $user) {
                                     \App\Models\ClientTest::updateOrCreate(
                                         [
@@ -103,19 +94,69 @@ class BatchInfolist
                                     );
                                 }
 
-                                // ===============================
-                                // 5. Ubah status batch menjadi "open"
-                                // ===============================
-                                $record->update([
-                                    'status' => 'open',
-                                ]);
+                                // Aktifkan semua user
+                                \App\Models\User::whereIn('id', $userIds)->update(['is_active' => 1]);
 
-                                // ===============================
-                                // 6. Notifikasi
-                                // ===============================
+                                // Ubah status batch
+                                $record->update(['status' => 'open']);
+
+                                // Notifikasi
                                 \Filament\Notifications\Notification::make()
                                     ->title('Batch berhasil dimulai!')
                                     ->body('Soal berhasil digenerate dan data client_test sudah disiapkan.')
+                                    ->success()
+                                    ->send();
+                            }),
+
+                        // ===========================
+                        // Tombol Akhiri Batch
+                        // ===========================
+                        Action::make('endBatch')
+                            ->label('Akhiri Batch')
+                            ->button()
+                            ->color('danger')
+                            ->visible(fn ($record) => $record->status == 'open')
+                            ->requiresConfirmation()
+                            ->action(function ($record) {
+                                $userIds = $record->users->pluck('id');
+
+                                // Nonaktifkan semua user
+                                \App\Models\User::whereIn('id', $userIds)->update(['is_active' => 0]);
+
+                                // Ubah status batch
+                                $record->update(['status' => 'closed']);
+
+                                // Notifikasi
+                                \Filament\Notifications\Notification::make()
+                                    ->title('Batch berhasil diakhiri!')
+                                    ->body('Semua user dinonaktifkan dan batch ditutup.')
+                                    ->success()
+                                    ->send();
+                            }),
+
+                        // ===========================
+                        // Tombol Proses Hasil
+                        // ===========================
+                        Action::make('processResults')
+                            ->label('Proses Hasil')
+                            ->button()
+                            ->color('primary')
+                            ->icon('heroicon-o-cog')
+                            ->visible(fn ($record) => $record->status == 'closed')
+                            ->requiresConfirmation()
+                            ->action(function ($record) {
+                                $userIds = $record->users->pluck('id');
+
+                                // Contoh logika proses hasil
+                                // Misal: hitung skor atau generate report
+                                foreach ($userIds as $id) {
+                                    SPMResultService::processUser($id);
+                                    PapikostickResultService::processUser($id);
+                                }
+
+                                \Filament\Notifications\Notification::make()
+                                    ->title('Hasil batch diproses!')
+                                    ->body('Semua hasil peserta batch sudah diproses.')
                                     ->success()
                                     ->send();
                             }),
@@ -123,32 +164,30 @@ class BatchInfolist
                     ->columnSpanFull(),
 
                     /*
-                    |--------------------------------------------------------------------------
+                    |------------------------------------------------------------------
                     | REPEATABLE ENTRY: LIST USERS
-                    |--------------------------------------------------------------------------
+                    |------------------------------------------------------------------
                     */
                     RepeatableEntry::make('users')
                         ->schema([
                             Section::make()
                                 ->schema([
-
                                     TextEntry::make('name')->label('Name'),
                                     TextEntry::make('username')->label('Username'),
                                     TextEntry::make('plain_password')->label('Password'),
-
                                     TextEntry::make('birth')
                                         ->label('Place, Date of Birth')
                                         ->state(fn ($record) =>
                                             $record->place_of_birth . ', ' .
                                             \Carbon\Carbon::parse($record['date_of_birth'])->format('d M Y')
                                         ),
-
                                     TextEntry::make('age')->label('Age'),
                                     TextEntry::make('last_education')->label('Last Education'),
                                 ])
                                 ->columns(4),
                         ])
                         ->columnSpanFull(),
+
                 ])
                 ->columnSpanFull(),
         ]);

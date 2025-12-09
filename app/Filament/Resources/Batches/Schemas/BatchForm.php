@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Batches\Schemas;
 
 use Filament\Schemas\Schema;
+use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Select;
 use Filament\Schemas\Components\Grid;
 use Filament\Forms\Components\Repeater;
@@ -25,22 +26,11 @@ class BatchForm
                         TextInput::make('name')
                             ->label('Batch Name')
                             ->required(),
-
-                        Select::make('status')
+                        
+                        TextInput::make('status')
                             ->label('Status')
-                            ->options([
-                                'standby' => 'Stand By',
-                            ])
-                            ->default('standby')
-                            ->required(),
+                            ->readOnly(),
 
-                        DateTimePicker::make('start_time')
-                            ->label('Start Time')
-                            ->required(),
-
-                        DateTimePicker::make('end_time')
-                            ->label('End Time')
-                            ->required(),
                     ]),
                 ])
                 ->collapsible()
@@ -51,6 +41,7 @@ class BatchForm
 
             Section::make('Participants')
                 ->description('Add batch participants')
+                ->disabled(fn ($get) => $get('status') !== 'standby')
                 ->schema([
                     Repeater::make('users')
                         ->relationship()   // relasi ke Batch::users()
@@ -101,6 +92,15 @@ class BatchForm
 
                                 TextInput::make('last_education')
                                     ->label('Last Education'),
+                                
+                                Radio::make('is_active')
+                                    ->label('Status')
+                                    ->options([
+                                        0 => 'Nonaktif',
+                                    ])
+                                    ->default(0)
+
+
                             ]),
                         ])
 
