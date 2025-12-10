@@ -98,7 +98,11 @@ class BatchInfolist
                                 \App\Models\User::whereIn('id', $userIds)->update(['is_active' => 1]);
 
                                 // Ubah status batch
-                                $record->update(['status' => 'open']);
+                                $record->update([
+                                    'status'     => 'open',
+                                    'start_time' => now(),
+                                ]);
+
 
                                 // Notifikasi
                                 \Filament\Notifications\Notification::make()
@@ -124,7 +128,10 @@ class BatchInfolist
                                 \App\Models\User::whereIn('id', $userIds)->update(['is_active' => 0]);
 
                                 // Ubah status batch
-                                $record->update(['status' => 'closed']);
+                                $record->update([
+                                    'status'     => 'closed',
+                                    'end_time' => now(),
+                                ]);
 
                                 // Notifikasi
                                 \Filament\Notifications\Notification::make()
@@ -142,17 +149,18 @@ class BatchInfolist
                             ->button()
                             ->color('primary')
                             ->icon('heroicon-o-cog')
-                            ->visible(fn ($record) => $record->status == 'closed')
+                            ->visible(fn ($record) => $record->status == 'closed' && !$record->is_result_processed)
                             ->requiresConfirmation()
                             ->action(function ($record) {
                                 $userIds = $record->users->pluck('id');
 
-                                // Contoh logika proses hasil
-                                // Misal: hitung skor atau generate report
                                 foreach ($userIds as $id) {
                                     SPMResultService::processUser($id);
                                     PapikostickResultService::processUser($id);
                                 }
+
+                                // Tandai sebagai selesai diproses
+                                $record->update(['is_result_processed' => true]);
 
                                 \Filament\Notifications\Notification::make()
                                     ->title('Hasil batch diproses!')
@@ -160,6 +168,21 @@ class BatchInfolist
                                     ->success()
                                     ->send();
                             }),
+                        
+                        Action::make('downloadResults')
+                            ->label('Download Hasil')
+                            ->button()
+                            ->color('info')
+                            ->icon('heroicon-o-arrow-down-tray')
+                            ->visible(fn ($record) => $record->status == 'closed' && $record->is_result_processed)
+                            ->action(function ($record) {
+                                // Logic generate PDF/ZIP
+                                return response()->download(
+                                    (new \App\Services\ResultExportService)->exportBatch($record->id)
+                                );
+                            }),
+
+
                     ])
                     ->columnSpanFull(),
 

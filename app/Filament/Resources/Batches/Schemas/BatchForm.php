@@ -29,6 +29,7 @@ class BatchForm
                         
                         TextInput::make('status')
                             ->label('Status')
+                            ->default('standby')
                             ->readOnly(),
 
                     ]),
@@ -41,7 +42,14 @@ class BatchForm
 
             Section::make('Participants')
                 ->description('Add batch participants')
-                ->disabled(fn ($get) => $get('status') !== 'standby')
+                ->disabled(function ($get, $livewire) {
+                    // Cek apakah ini halaman Edit
+                    $isEdit = $livewire instanceof \Filament\Resources\Pages\EditRecord;
+
+                    // Hanya disable jika sedang edit DAN status bukan standby
+                    return $isEdit && $get('status') !== 'standby';
+                })
+
                 ->schema([
                     Repeater::make('users')
                         ->relationship()   // relasi ke Batch::users()

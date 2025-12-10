@@ -15,7 +15,8 @@ class Batch extends Model
         'start_time',
         'end_time',
         'reporting_pdf',
-        'status'
+        'status',
+        'is_result_processed',
     ];
 
     public function invoices()

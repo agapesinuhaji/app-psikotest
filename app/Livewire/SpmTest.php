@@ -2,14 +2,15 @@
 
 namespace App\Livewire;
 
+use App\Models\Batch;
+use App\Models\Option;
 use Livewire\Component;
 use App\Models\Question;
-use App\Models\Option;
-use App\Models\ClientQuestion;
 use App\Models\ClientTest;
 use App\Models\TypeQuestion;
-use Illuminate\Support\Facades\Auth;
+use App\Models\ClientQuestion;
 use Livewire\Attributes\Locked;
+use Illuminate\Support\Facades\Auth;
 
 class SpmTest extends Component
 {
@@ -26,15 +27,20 @@ class SpmTest extends Component
 
     public function mount()
     {
-        $userId = Auth::id();
+        $user = auth()->user();
 
-        $this->clientTest = ClientTest::where('user_id', $userId)->first();
+        // Ambil batch berdasarkan batch_id dari user yang login
+        $batch = Batch::findOrFail($user->batch_id);
 
-        if (!$this->clientTest || !$this->clientTest->can_access) { 
+        // Pastikan user aktif dan batch status open
+        if ($user->is_active != 1 || $batch->status !== 'open') {
             abort(403, 'Anda belum memiliki akses ujian.');
         }
 
-        // Lanjutkan inisialisasi soal jika akses ada
+        $this->clientTest = ClientTest::firstOrCreate([
+            'user_id' => $user->id,
+        ]);
+
         $type = TypeQuestion::where('slug', 'spm')->firstOrFail();
         $this->questions = Question::where('type_question_id', $type->id)
             ->with('options')
@@ -45,6 +51,7 @@ class SpmTest extends Component
             abort(404, "Soal SPM kosong!");
         }
     }
+
 
 
     public function startTest()

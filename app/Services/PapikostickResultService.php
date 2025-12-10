@@ -2,10 +2,11 @@
 
 namespace App\Services;
 
+use App\Models\User;
+use App\Models\Result;
+use Illuminate\Support\Arr;
 use App\Models\ClientQuestion;
 use App\Models\PapikostickResult; // pastikan model ini ada (atau ganti nama sesuai modelmu)
-use App\Models\User;
-use Illuminate\Support\Arr;
 
 class PapikostickResultService
 {
@@ -113,6 +114,21 @@ class PapikostickResultService
                 'z_c_conclusion'           => $belajar_conclusion,
                 'final_conclusion'         => $finalConclusion,
                 'start_time'               => now(), // ubah bila ada sumber waktu yg tepat
+            ]
+        );
+
+
+        // === SIMPAN KE TABLE results ===
+        Result::updateOrCreate(
+            ['user_id' => $userId],
+            [
+                'conclusion' => $finalConclusion,
+
+                // Jika LAYAK → approved_psikolog_at isi tanggal
+                'approved_psikolog_at' => $finalConclusion === 'LAYAK' ? now() : null,
+
+                // Jika TIDAK VALID → rejected_at isi tanggal
+                'rejected_at' => $finalConclusion === 'TIDAK VALID' ? now() : null,
             ]
         );
 

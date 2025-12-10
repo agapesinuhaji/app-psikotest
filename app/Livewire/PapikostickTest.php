@@ -2,14 +2,15 @@
 
 namespace App\Livewire;
 
+use App\Models\Batch;
+use App\Models\Option;
 use Livewire\Component;
 use App\Models\Question;
-use App\Models\Option;
-use App\Models\ClientQuestion;
 use App\Models\ClientTest;
 use App\Models\TypeQuestion;
-use Illuminate\Support\Facades\Auth;
+use App\Models\ClientQuestion;
 use Livewire\Attributes\Locked;
+use Illuminate\Support\Facades\Auth;
 
 class PapikostickTest extends Component
 {
@@ -27,17 +28,21 @@ class PapikostickTest extends Component
 
     public function mount()
     {
-        $userId = Auth::id();
+        $user = auth()->user();
 
         // Ambil atau buat clientTest
         $this->clientTest = ClientTest::firstOrCreate(
-            ['user_id' => $userId],
+            ['user_id' => $user->id],  // ✅ gunakan ID
             ['papikostick_start_at' => now()]
         );
 
-        // === Cek akses user ===
-        if (!$this->clientTest->can_access_papikostick) {
-            abort(403, 'Anda belum memiliki akses ujian Papikostick.');
+
+        // Ambil batch berdasarkan batch_id dari user yang login
+        $batch = Batch::findOrFail($user->batch_id);
+
+        // Pastikan user aktif dan batch status open
+        if ($user->is_active != 1 || $batch->status !== 'open') {
+            abort(403, 'Anda belum memiliki akses ujian.');
         }
 
         $type = TypeQuestion::where('slug', 'papi-kostick')->firstOrFail();
