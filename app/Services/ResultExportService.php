@@ -2,90 +2,64 @@
 
 namespace App\Services;
 
-use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Storage;
-use ZipArchive;
-use App\Models\User;
-use App\Models\Batch;
-use Exception;
+use Illuminate\Support\Str;
 
 class ResultExportService
 {
-    /**
-     * Export semua hasil dalam batch ke ZIP.
-     */
-    public function exportBatch(int $batchId): string
+    public function exportBatchDocx($batch): string
     {
-        $batch = Batch::with('users')->findOrFail($batchId);
+        $filename = 'hasil-batch-' . Str::slug($batch->name) . '.docx';
+        $path     = 'exports/' . $filename;
 
-        // Folder temporary PDF
-        $folder = "exports/batch_{$batchId}_" . time();
-        Storage::makeDirectory($folder);
+        // Ambil data batch lengkap
+        $batch->load([
+            'users',
+            'users.clientTest',
+            'users.spmResult',
+            'users.papikostickResult',
+        ]);
 
-        // 1️⃣ Generate PDF per user — kirim $batch
-        foreach ($batch->users as $user) {
-            $this->generateUserPDF($user, $folder, $batch);
-        }
+        // Render HTML dari Blade
+        $html = view('exports.batch-report', [
+            'batch' => $batch,
+        ])->render();
 
-        // 2️⃣ Buat ZIP
-        $zipPath = "exports/batch_{$batchId}_results.zip";
-        $this->createZip($folder, $zipPath);
-
-        // 3️⃣ Bersihkan PDF sementara
-        Storage::deleteDirectory($folder);
-
-        return storage_path("app/{$zipPath}");
+        // Bungkus HTML agar dikenali Word
+        $docxContent = <<<HTML
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+    body {
+        font-family: Times New Roman, serif;
+        font-size: 12pt;
     }
-
-    /**
-     * Generate PDF per user.
-     */
-    private function generateUserPDF(User $user, string $folder, Batch $batch): void
-    {
-        $corporate_identity = \App\Models\CorporateIdentity::first();
-
-        $data = [
-            'user'  => $user,
-            'spm'   => $user->spmResult ?? null,
-            'papi'  => $user->papikostickResult ?? null,
-            'batch' => $batch, // ⬅️ Tambahkan batch
-            'corporate_identity' => $corporate_identity,
-        ];
-
-        $pdf = Pdf::loadView('exports.user_result', $data)
-            ->setPaper('A4');
-
-        $pdfName = "{$user->username}_result.pdf";
-
-        Storage::put("$folder/$pdfName", $pdf->output());
+    h1, h2 {
+        text-align: center;
     }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+    }
+    table, th, td {
+        border: 1px solid #000;
+    }
+    th, td {
+        padding: 6px;
+    }
+</style>
+</head>
+<body>
+$html
+</body>
+</html>
+HTML;
 
-    /**
-     * Buat ZIP dari semua PDF dalam folder.
-     */
-    private function createZip(string $sourceFolder, string $zipPath): void
-    {
-        Storage::makeDirectory(dirname($zipPath));
+        Storage::disk('local')->put($path, $docxContent);
 
-        $zip = new ZipArchive;
-        $absoluteZipPath = storage_path("app/$zipPath");
-
-        if ($zip->open($absoluteZipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
-            throw new Exception("Tidak dapat membuka atau membuat ZIP: $absoluteZipPath");
-        }
-
-        $files = Storage::files($sourceFolder);
-
-        foreach ($files as $file) {
-            $realPath = realpath(Storage::path($file));
-
-            if (!$realPath || !is_file($realPath)) {
-                continue;
-            }
-
-            $zip->addFile($realPath, basename($file));
-        }
-
-        $zip->close();
+        return Storage::disk('local')->url($path);
     }
 }

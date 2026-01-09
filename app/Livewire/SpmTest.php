@@ -22,53 +22,60 @@ class SpmTest extends Component
     public $showPopup = true;
     public $showFinishPopup = false;
 
+    // ⏱️ DURASI DALAM DETIK (DB MENYIMPAN MENIT)
     #[Locked]
-    public $duration = 3600; // contoh: 60 menit = 3600 detik
+    public int $duration;
 
     public function mount()
     {
         $user = auth()->user();
 
-        // Ambil batch berdasarkan batch_id dari user yang login
+        // Ambil batch user
         $batch = Batch::findOrFail($user->batch_id);
 
-        // Pastikan user aktif dan batch status open
+        // Validasi akses
         if ($user->is_active != 1 || $batch->status !== 'open') {
             abort(403, 'Anda belum memiliki akses ujian.');
         }
 
-        $this->clientTest = ClientTest::firstOrCreate([
-            'user_id' => $user->id,
-        ]);
+        // Ambil atau buat client test
+        $this->clientTest = ClientTest::firstOrCreate(
+            ['user_id' => $user->id],
+            ['spm_start_at' => now()]
+        );
 
+        // Ambil type question SPM
         $type = TypeQuestion::where('slug', 'spm')->firstOrFail();
+
+        // ✅ KONVERSI MENIT → DETIK
+        // Contoh DB: 60 (menit) → 3600 (detik)
+        $this->duration = ((int) $type->duration) * 60;
+
+        // Ambil soal
         $this->questions = Question::where('type_question_id', $type->id)
             ->with('options')
             ->orderBy('id')
             ->get();
 
         if ($this->questions->isEmpty()) {
-            abort(404, "Soal SPM kosong!");
+            abort(404, 'Soal SPM kosong!');
         }
     }
 
-
-
     public function startTest()
     {
-        $clientTest = ClientTest::firstOrCreate(
-            ['user_id' => auth()->id()],
-            []
-        );
-
-        $clientTest->update([
+        // Update waktu mulai
+        $this->clientTest->update([
             'spm_start_at' => now()
         ]);
 
+        // Tutup popup
         $this->showPopup = false;
 
+        // ⏱️ Jalankan timer (DETIK)
         $this->dispatch('startTimer', duration: $this->duration);
 
+        // Masuk fullscreen
         $this->dispatch('enterFullscreen');
     }
 
@@ -82,18 +89,19 @@ class SpmTest extends Component
         $current = $this->questions[$this->currentIndex];
         $option = Option::findOrFail($this->selectedOption);
 
-        $isCorrect = $option->value == 1; // otomatis benar/salah
+        // 1 = benar, 0 = salah
+        $isCorrect = $option->value == 1;
 
         ClientQuestion::updateOrCreate(
             [
                 'user_id' => Auth::id(),
-                'question_id' => $current->id
+                'question_id' => $current->id,
             ],
             [
                 'option_id' => $option->id,
-                'score' => $option->value,   // 1 untuk benar, 0 untuk salah
-                'is_correct' => $isCorrect,  // simpan kebenaran jawaban
-                'is_active' => 1
+                'score' => $option->value,
+                'is_correct' => $isCorrect,
+                'is_active' => 1,
             ]
         );
 
@@ -102,14 +110,13 @@ class SpmTest extends Component
         if ($this->currentIndex < count($this->questions) - 1) {
             $this->currentIndex++;
 
+            // Update progress bar
             $percentage = (($this->currentIndex + 1) / count($this->questions)) * 100;
             $this->dispatch('updateProgress', percentage: $percentage);
-
         } else {
             $this->finishTest();
         }
     }
-
 
     public function finishTest()
     {
@@ -119,6 +126,7 @@ class SpmTest extends Component
 
         $this->showFinishPopup = true;
 
+        // Matikan proteksi unload
         $this->dispatch('disableUnloadProtection');
 
         $this->dispatch('testFinished');
@@ -137,7 +145,7 @@ class SpmTest extends Component
             'currentIndex' => $this->currentIndex,
             'questions' => $this->questions,
             'selectedOption' => $this->selectedOption,
-            'showPopup' => $this->showPopup
+            'showPopup' => $this->showPopup,
         ])->layout('layouts.app');
     }
 }

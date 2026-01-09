@@ -22,65 +22,62 @@ class PapikostickTest extends Component
     public $showPopup = true;
     public $showFinishPopup = false;
 
-    
-    #[Locked] 
-    public $duration = 7200; // 120 menit = 7200 detik
+    // ⏱️ DURASI DALAM DETIK (DB MENYIMPAN MENIT)
+    #[Locked]
+    public int $duration;
 
     public function mount()
     {
         $user = auth()->user();
 
-        // Ambil atau buat clientTest
+        // Ambil atau buat client test
         $this->clientTest = ClientTest::firstOrCreate(
-            ['user_id' => $user->id],  // ✅ gunakan ID
+            ['user_id' => $user->id],
             ['papikostick_start_at' => now()]
         );
 
-
-        // Ambil batch berdasarkan batch_id dari user yang login
+        // Ambil batch user
         $batch = Batch::findOrFail($user->batch_id);
 
-        // Pastikan user aktif dan batch status open
+        // Validasi akses
         if ($user->is_active != 1 || $batch->status !== 'open') {
             abort(403, 'Anda belum memiliki akses ujian.');
         }
 
+        // Ambil type question
         $type = TypeQuestion::where('slug', 'papi-kostick')->firstOrFail();
 
+        // ✅ KONVERSI MENIT → DETIK
+        // Contoh DB: 120 (menit) → 7200 (detik)
+        $this->duration = ((int) $type->duration) * 60;
+
+        // Ambil soal
         $this->questions = Question::where('type_question_id', $type->id)
             ->with('options')
             ->orderBy('id')
             ->get();
 
         if ($this->questions->isEmpty()) {
-            abort(404, "Soal Papikostick kosong!");
+            abort(404, 'Soal Papikostick kosong!');
         }
     }
 
-
     public function startTest()
     {
-        // Ambil atau buat record client_tests milik user
-        $clientTest = \App\Models\ClientTest::firstOrCreate(
-            ['user_id' => auth()->id()],
-            []
-        );
-
-        // Update waktu mulai Papikostick
-        $clientTest->update([
+        // Update waktu mulai
+        $this->clientTest->update([
             'papikostick_start_at' => now()
         ]);
 
         // Tutup popup
         $this->showPopup = false;
 
-        // Jalankan timer
+        // ⏱️ Jalankan timer (DETIK)
         $this->dispatch('startTimer', duration: $this->duration);
 
         // Masuk fullscreen
         $this->dispatch('enterFullscreen');
     }
-
 
     public function selectOption($optionId)
     {
@@ -95,12 +92,12 @@ class PapikostickTest extends Component
         ClientQuestion::updateOrCreate(
             [
                 'user_id' => Auth::id(),
-                'question_id' => $current->id
+                'question_id' => $current->id,
             ],
             [
                 'option_id' => $option->id,
                 'score' => $option->value,
-                'is_active' => 1
+                'is_active' => 1,
             ]
         );
 
@@ -109,15 +106,13 @@ class PapikostickTest extends Component
         if ($this->currentIndex < count($this->questions) - 1) {
             $this->currentIndex++;
 
-            // === 👉 Tambahkan ini! ===
+            // Update progress bar
             $percentage = (($this->currentIndex + 1) / count($this->questions)) * 100;
             $this->dispatch('updateProgress', percentage: $percentage);
-
         } else {
             $this->finishTest();
         }
     }
-
 
     public function finishTest()
     {
@@ -127,14 +122,11 @@ class PapikostickTest extends Component
 
         $this->showFinishPopup = true;
 
-        // Hapus proteksi beforeunload
+        // Matikan proteksi unload
         $this->dispatch('disableUnloadProtection');
-        
 
-        // Trigger redirect
         $this->dispatch('testFinished');
     }
-
 
     #[\Livewire\Attributes\On('forceSubmit')]
     public function forceSubmit()
@@ -149,7 +141,7 @@ class PapikostickTest extends Component
             'currentIndex' => $this->currentIndex,
             'questions' => $this->questions,
             'selectedOption' => $this->selectedOption,
-            'showPopup' => $this->showPopup
+            'showPopup' => $this->showPopup,
         ])->layout('layouts.app');
     }
 }

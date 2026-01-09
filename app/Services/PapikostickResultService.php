@@ -2,265 +2,257 @@
 
 namespace App\Services;
 
-use App\Models\User;
-use App\Models\Result;
-use Illuminate\Support\Arr;
 use App\Models\ClientQuestion;
-use App\Models\PapikostickResult; // pastikan model ini ada (atau ganti nama sesuai modelmu)
+use App\Models\PapikostickResult;
+use App\Models\Result;
+use App\Models\User;
+
+
 
 class PapikostickResultService
 {
-    /**
-     * Proses semua perhitungan Papikostick untuk satu user
-     *
-     * @param int $userId
-     * @return array hasil ringkasan
-     */
     public static function processUser(int $userId): array
     {
-        $answers = ClientQuestion::where('user_id', $userId)
-            ->whereNotNull('option_id') // asumsi option_id berisi jawaban
-            ->with(['question', 'option']) // pastikan relasi ada
-            ->get();
+        /**
+         * =====================================================
+         * STEP 1
+         * Ambil jawaban Papikostick (2 Option)
+         * Nomor PAPI = urutan question_id terkecil
+         * =====================================================
+         */
+        $answers = ClientQuestion::query()
+            ->where('user_id', $userId)
+            ->whereHas('question', fn ($q) => $q->where('question_code', '2 Option'))
+            ->with(['question.options'])
+            ->orderBy('question_id')
+            ->get()
+            ->values()
+            ->map(function ($item, $index) {
+                $item->papi_number = $index + 1;
+                return $item;
+            });
 
-        // Map soal => expected letter (A or B) untuk setiap aspek (dari definisimu)
-        $map = self::mappingQuestions();
+        /**
+         * =====================================================
+         * STEP 2
+         * Mapping aspek
+         * =====================================================
+         */
+        $mapping = self::mappingQuestions();
 
-        // Hitung skor per aspek berdasarkan kecocokan jawaban user dengan expected letter
-        $scores = [];
-        foreach ($map as $aspect => $questionNumbers) {
-            $scores[$aspect] = 0;
-            foreach ($questionNumbers as $num => $expectedLetter) {
-                // cari answer sesuai nomor soal
-                $cq = $answers->first(function ($a) use ($num) {
-                    $q = $a->question;
-                    $no = $q->number ?? $q->order ?? $q->id ?? null;
-                    return (int) $no === (int) $num;
-                });
+        /**
+         * =====================================================
+         * STEP 3
+         * Inisialisasi skor aspek
+         * =====================================================
+         */
+        $scores = [
+            'G'  => 0,
+            'C'  => 0,
+            'N'  => 0,
+            'A'  => 0,
+            'W'  => 0,
+            'S'  => 0,
+            'K'  => 0,
+            'Z'  => 0,
+            'C2' => 0,
+        ];
 
-                if (! $cq) {
-                    continue; // soal tidak ditemukan / belum dijawab
+        /**
+         * =====================================================
+         * STEP 4
+         * Hitung skor per aspek
+         * =====================================================
+         */
+        foreach ($mapping as $aspect => $rules) {
+            foreach ($rules as $papiNumber => $expected) {
+
+                $answer = $answers->first(
+                    fn ($a) => $a->papi_number === $papiNumber
+                );
+
+                if (! $answer) {
+                    continue;
                 }
 
-                $ansLetter = self::getAnswerLetter($cq);
-                if (! $ansLetter) continue;
+                $options = $answer->question->options
+                    ->sortBy('id')
+                    ->values();
 
-                if (strtoupper($ansLetter) === strtoupper($expectedLetter)) {
+                if ($options->count() !== 2) {
+                    continue;
+                }
+
+                $minOptionId = (int) $options[0]->id;
+                $maxOptionId = (int) $options[1]->id;
+                $chosen      = (int) $answer->option_id;
+
+                if (
+                    ($expected === 'MIN' && $chosen === $minOptionId) ||
+                    ($expected === 'MAX' && $chosen === $maxOptionId)
+                ) {
                     $scores[$aspect]++;
                 }
             }
         }
 
-        // Sekarang hasil per aspek (G, C, N, A, W, S, K, Z, C2 (managing change))
-        // Kita ambil skor yang namanya sesuai mappingQuestions keys
-        // Nama keys: G, C, N, A, W, S, K, Z, C2
-        $g = $scores['G'] ?? 0;   // Orientasi Hasil (G)
-        $c = $scores['C'] ?? 0;   // Fleksibilitas (C)
-        $n = $scores['N'] ?? 0;   // Sistematika Kerja (N)
-        $a = $scores['A'] ?? 0;   // Motivasi Berprestasi (A)
-        $w = $scores['W'] ?? 0;   // Kerjasama (W)
-        $s = $scores['S'] ?? 0;   // Keterampilan Interpersonal (S)
-        $k = $scores['K'] ?? 0;   // Stabilitas Emosi (K)
-        $z = $scores['Z'] ?? 0;   // Pengembangan Diri (Z)
-        $c2 = $scores['C2'] ?? 0; // Mengelola Perubahan (C2) — note: 'C' sudah dipakai fleksibilitas
+        /**
+         * =====================================================
+         * STEP 5
+         * HITUNG DIMENSI BESAR
+         * =====================================================
+         */
+        $gcnScore  = $scores['G'] + $scores['C'] + $scores['N'];
+        $awskScore = $scores['A'] + $scores['W'] + $scores['S'] + $scores['K'];
+        $zcScore   = $scores['Z'] + $scores['C2'];
 
-        // 1) Sikap & Cara Kerja = total G + C + N
-        $sikap_total = $g + $c + $n;
-        $sikap_conclusion = self::concludeSikapCaraKerja($sikap_total);
+        $gcnConclusion  = self::concludeSikapCaraKerja($gcnScore);
+        $awskConclusion = self::concludeKepribadian($awskScore);
+        $zcConclusion   = self::concludeKemampuanBelajar($zcScore);
 
-        // 2) Kepribadian = total A + W + S + K
-        $kepribadian_total = $a + $w + $s + $k;
-        $kepribadian_conclusion = self::concludeKepribadian($kepribadian_total);
 
-        // 3) Kemampuan Belajar = total Z + C2
-        $belajar_total = $z + $c2;
-        $belajar_conclusion = self::concludeKemampuanBelajar($belajar_total);
 
-        // 4) Kesimpulan akhir: LAYAK / TIDAK VALID / TIDAK LAYAK
-        $passes = [
-            'sikap' => self::isPassedSikap($sikap_total),
-            'kepribadian' => self::isPassedKepribadian($kepribadian_total),
-            'belajar' => self::isPassedBelajar($belajar_total),
-        ];
 
-        $notPassedCount = collect($passes)->filter(fn($v) => ! $v)->count();
+        /**
+         * =====================================================
+         * STEP 6
+         * TENTUKAN KELAYAKAN (LAYAK / TIDAK LAYAK)
+         * =====================================================
+         */
+        $kurangCount = 0;
 
-        if ($passes['sikap'] && $passes['kepribadian'] && $passes['belajar']) {
-            $finalConclusion = 'LAYAK';
-        } elseif ($notPassedCount >= 2) {
-            $finalConclusion = 'TIDAK VALID';
-        } else {
-            $finalConclusion = 'TIDAK LAYAK';
+        if ($gcnScore <= 11) {
+            $kurangCount++;
         }
 
-        // Simpan ke tabel papikostick_results (sesuaikan model & kolommu)
+        if ($awskScore <= 13) {
+            $kurangCount++;
+        }
+
+        if ($zcScore <= 4) {
+            $kurangCount++;
+        }
+
+        $user = User::findOrFail($userId);
+        $userName = $user->name;
+
+
+        $finalConclusion = $kurangCount >= 2
+            ? "Hasil tes Sdr {$userName} TIDAK VALID" 
+            : "Berdasarkan pemeriksaan psikologis saat ini dengan memperhatikan seluruh gambaran aspek psikologis yang Sdri {$userName} miliki, rekomendasi untuk Sdri {$userName} adalah LAYAK untuk bekerja";
+
+
+        /**
+         * =====================================================
+         * STEP 7
+         * Simpan ke papikostick_results dan results
+         * =====================================================
+         */
         PapikostickResult::updateOrCreate(
             ['user_id' => $userId],
             [
-                'result_orientation'       => $g,
-                'flexibility'              => $c,
-                'systematic_work'          => $n,
-                'achievement_motivation'   => $a,
-                'cooperation'              => $w,
-                'interpersonal_skills'     => $s,
-                'emotional_stability'      => $k,
-                'self_development'         => $z,
-                'managing_change'          => $c2,
-                'g_c_n_score'              => $sikap_total,
-                'g_c_n_conclusion'         => $sikap_conclusion,
-                'a_w_s_k_score'            => $kepribadian_total,
-                'a_w_s_k_conclusion'       => $kepribadian_conclusion,
-                'z_c_score'                => $belajar_total,
-                'z_c_conclusion'           => $belajar_conclusion,
-                'final_conclusion'         => $finalConclusion,
-                'start_time'               => now(), // ubah bila ada sumber waktu yg tepat
+                // skor aspek
+                'result_orientation'     => $scores['G'],
+                'flexibility'            => $scores['C'],
+                'systematic_work'        => $scores['N'],
+                'achievement_motivation' => $scores['A'],
+                'cooperation'            => $scores['W'],
+                'interpersonal_skills'   => $scores['S'],
+                'emotional_stability'    => $scores['K'],
+                'self_development'       => $scores['Z'],
+                'managing_change'        => $scores['C2'],
+
+                // dimensi besar
+                'g_c_n_score'        => $gcnScore,
+                'g_c_n_conclusion'   => $gcnConclusion,
+
+                'a_w_s_k_score'      => $awskScore,
+                'a_w_s_k_conclusion' => $awskConclusion,
+
+                'z_c_score'          => $zcScore,
+                'z_c_conclusion'     => $zcConclusion,
             ]
         );
 
-
-        // === SIMPAN KE TABLE results ===
         Result::updateOrCreate(
             ['user_id' => $userId],
             [
                 'conclusion' => $finalConclusion,
-
-                // Jika LAYAK → approved_psikolog_at isi tanggal
-                'approved_psikolog_at' => $finalConclusion === 'LAYAK' ? now() : null,
-
-                // Jika TIDAK VALID → rejected_at isi tanggal
-                'rejected_at' => $finalConclusion === 'TIDAK VALID' ? now() : null,
             ]
         );
 
-        // Kembalikan ringkasan (berguna untuk log)
         return [
             'scores' => $scores,
-            'sikap_total' => $sikap_total,
-            'sikap_conclusion' => $sikap_conclusion,
-            'kepribadian_total' => $kepribadian_total,
-            'kepribadian_conclusion' => $kepribadian_conclusion,
-            'belajar_total' => $belajar_total,
-            'belajar_conclusion' => $belajar_conclusion,
-            'final_conclusion' => $finalConclusion,
-            'passes' => $passes,
+            'gcn'  => [$gcnScore,  $gcnConclusion],
+            'awsk' => [$awskScore, $awskConclusion],
+            'zc'   => [$zcScore,   $zcConclusion],
         ];
     }
 
+
+    
+    
+
+
+
     /**
-     * Mapping soal -> expected letter
-     *
-     * Format:
-     * 'G' => [ 1 => 'A', 11 => 'A', ... ]
+     * =====================================================
+     * MAPPING PAPI → ASPEK
+     * =====================================================
      */
     private static function mappingQuestions(): array
     {
         return [
-            // 6. Orientasi Hasil = G
-            'G' => array_fill_keys([1,11,21,31,41,51,61,71,81], 'A'),
-
-            // 7. Fleksibilitas = C (gunakan key C_forFlex)
-            'C' => array_fill_keys([11,22,33,44,55,66,77,88,89], 'A'),
-
-            // 8. Sistematika Kerja = N
-            'N' => array_fill_keys([2,13,24,35,46,57,68,79,90], 'B'),
-
-            // 9. Motivasi Berprestasi = A
-            'A' => [
-                2 => 'A', 3 => 'B', 14 => 'B', 25 => 'B', 36 => 'B',
-                47 => 'B', 58 => 'B', 69 => 'B', 80 => 'B'
-            ],
-
-            // 10. Kerjasama = W
-            'W' => array_fill_keys([10,20,30,40,50,60,70,80,90], 'A'),
-
-            // 11. Keterampilan Interpersonal = S
-            'S' => [
-                52 => 'B', 56 => 'A', 61 => 'B', 63 => 'B', 66 => 'A',
-                74 => 'B', 76 => 'A', 85 => 'B', 86 => 'A'
-            ],
-
-            // 12. Stabilitas Emosi = K
-            'K' => [
-                8 => 'B', 9 => 'A', 18 => 'B', 20 => 'A', 28 => 'B',
-                38 => 'B', 48 => 'B', 58 => 'B', 68 => 'B'
-            ],
-
-            // 13. Pengembangan Diri = Z
-            'Z' => [
-                7 => 'A', 8 => 'B', 17 => 'A', 19 => 'B', 27 => 'A',
-                30 => 'B', 37 => 'A', 47 => 'A', 57 => 'A'
-            ],
-
-            // 14. Mengelola Perubahan = C2 (gunakan key C2 to avoid colliding 'C' above)
-            'C2' => array_fill_keys([11,22,33,44,55,66,77,88,89], 'A'),
+            'G' => [1=>'MIN',11=>'MIN',21=>'MIN',31=>'MIN',41=>'MIN',51=>'MIN',61=>'MIN',71=>'MIN',81=>'MIN'],
+            'C' => [11=>'MIN',22=>'MIN',33=>'MIN',44=>'MIN',55=>'MIN',66=>'MIN',77=>'MIN',88=>'MIN',89=>'MAX'],
+            'N' => [2=>'MAX',13=>'MAX',24=>'MAX',35=>'MAX',46=>'MAX',57=>'MAX',68=>'MAX',79=>'MAX',89=>'MAX'],
+            'A' => [2=>'MIN',3=>'MAX',14=>'MAX',25=>'MAX',36=>'MAX',47=>'MAX',58=>'MAX',69=>'MAX',80=>'MAX'],
+            'W' => [5=>'MIN',16=>'MIN',27=>'MIN',38=>'MIN',49=>'MIN',60=>'MIN',71=>'MIN',82=>'MIN',93=>'MIN'],
+            'S' => [52=>'MIN',56=>'MIN',61=>'MAX',63=>'MAX',66=>'MIN',74=>'MAX',76=>'MIN',85=>'MAX',86=>'MIN'],
+            'K' => [8=>'MAX',9=>'MIN',18=>'MAX',20=>'MIN',28=>'MAX',38=>'MAX',48=>'MAX',58=>'MAX',68=>'MAX'],
+            'Z' => [7=>'MIN',8=>'MAX',17=>'MIN',19=>'MAX',27=>'MIN',30=>'MAX',37=>'MIN',47=>'MIN',57=>'MIN'],
+            'C2'=> [11=>'MIN',22=>'MIN',33=>'MIN',44=>'MIN',55=>'MIN',66=>'MIN',77=>'MIN',88=>'MIN',89=>'MAX'],
         ];
     }
 
     /**
-     * Ambil huruf jawaban user dari ClientQuestion instance
-     * (robust: cek beberapa properti relasi option)
-     */
-    private static function getAnswerLetter($clientQuestion)
-    {
-        // Jika ada relasi option dan punya code/label
-        $opt = $clientQuestion->option ?? null;
-        if ($opt) {
-            $letter = $opt->code ?? $opt->label ?? $opt->value ?? null;
-            if ($letter) return strtoupper(substr(trim($letter), 0, 1));
-        }
-
-        // Jika ada field jawaban langsung (misal answer)
-        if (isset($clientQuestion->answer) && $clientQuestion->answer) {
-            return strtoupper(substr(trim($clientQuestion->answer), 0, 1));
-        }
-
-        // Jika kolom option_id menyimpan A/B (tidak umum), pakai itu
-        if (isset($clientQuestion->option_id) && is_string($clientQuestion->option_id)) {
-            return strtoupper(substr(trim($clientQuestion->option_id), 0, 1));
-        }
-
-        // fallback: tidak diketahui
-        return null;
-    }
-
-    /**
-     * Kesimpulan Sikap & Cara Kerja (berdasarkan tabel yang kamu berikan)
+     * =====================================================
+     * CONCLUSION HELPERS
+     * =====================================================
      */
     private static function concludeSikapCaraKerja(int $score): string
     {
         return match (true) {
-            $score <= 3 => 'Sdr X tidak memiliki sikap dan cara kerja yang memadai dalam menyelesaikan tugas-tugasnya.',
-            $score <= 6 => 'Sdr X kurang memiliki sikap dan cara kerja yang memadai dalam menyelesaikan tugas-tugasnya.',
-            $score <= 12 => 'Sdr X memiliki sikap dan cara kerja yang cukup memadai dalam menyelesaikan tugas-tugasnya.',
-            $score <= 21 => 'Sdr X memiliki sikap dan cara kerja yang baik dalam menyelesaikan tugas-tugasnya.',
-            default => 'Sdr X memiliki sikap dan cara kerja yang sangat baik dalam menyelesaikan tugas-tugasnya.',
+            $score <= 10  => 'tidak memiliki sikap dan cara kerja yang memadai dalam menyelesaikan tugas-tugasnya.',
+            $score == 11  => 'kurang memiliki sikap dan cara kerja yang memadai dalam menyelesaikan tugas-tugasnya.',
+            $score <= 14 => 'memiliki sikap dan cara kerja yang cukup memadai dalam menyelesaikan tugas-tugasnya.',
+            $score <= 17 => 'memiliki sikap dan cara kerja yang baik dalam menyelesaikan tugas-tugasnya.',
+            $score <= 19 => 'memiliki sikap dan cara kerja yang sangat baik dalam menyelesaikan tugas-tugasnya.',
+            default      => '-',
         };
     }
 
     private static function concludeKepribadian(int $score): string
     {
         return match (true) {
-            $score <= 4 => 'Sdr X tidak memiliki kepribadian yang memadai untuk beradaptasi dan membawa diri dalam menyesuaikan diri di lingkungannya.',
-            $score <= 8 => 'Sdr X kurang memiliki kepribadian yang baik untuk beradaptasi dan membawa diri dalam menyesuaikan diri di lingkungannya.',
-            $score <= 16 => 'Sdr X memiliki kepribadian yang cukup memadai untuk beradaptasi dan membawa diri dalam menyesuaikan diri di lingkungannya.',
-            $score <= 28 => 'Sdr X memiliki kepribadian yang baik untuk beradaptasi dan membawa diri dalam menyesuaikan diri di lingkungannya.',
-            default => 'Sdr X memiliki kepribadian yang sangat baik untuk beradaptasi dan membawa diri dalam menyesuaikan diri di lingkungannya.',
+            $score <= 10  => 'tidak memiliki kepribadian yang memadai untuk beradaptasi dalam bekerja dan berinteraksi dengan orang-orang baru.',
+            $score <= 13  => 'kurang memiliki kepribadian yang baik untuk beradaptasi dalam bekerja dan berinteraksi dengan orang-orang baru.',
+            $score <= 16 => 'memiliki kepribadian yang cukup memadai untuk beradaptasi dalam bekerja dan berinteraksi dengan orang-orang baru.',
+            $score <= 23 => 'memiliki kepribadian yang baik untuk beradaptasi dalam bekerja dan berinteraksi dengan orang-orang baru.',
+            $score <= 28 => 'memiliki kepribadian yang sangat baik untuk beradaptasi dalam bekerja dan berinteraksi dengan orang-orang baru.',
+            default      => '-',
         };
     }
 
     private static function concludeKemampuanBelajar(int $score): string
     {
         return match (true) {
-            $score <= 2 => 'Sdr X tidak memiliki kemampuan yang memadai dalam mempelajari hal baru dan mengelola perubahan.',
-            $score <= 4 => 'Sdr X kurang memiliki memiliki kemampuan yang baik dalam mempelajari hal baru dan mengelola perubahan.',
-            $score <= 8 => 'Sdr X memiliki kemampuan yang cukup memadai dalam mempelajari hal baru dan mengelola perubahan.',
-            $score <= 14 => 'Sdr X memiliki kemampuan yang baik dalam mempelajari hal baru dan mengelola perubahan.',
-            default => 'Sdr X memiliki kemampuan yang sangat baik dalam mempelajari hal baru dan mengelola perubahan.',
+            $score <= 2  => 'tidak memiliki kemampuan yang memadai dalam mempelajari hal baru dan menyesuaikan diri dengan situasi yang baru.',
+            $score <= 4  => 'kurang memiliki memiliki kemampuan yang baik dalam mempelajari hal baru dan menyesuaikan diri dengan situasi yang baru.',
+            $score <= 8  => 'memiliki kemampuan yang cukup memadai dalam mempelajari hal baru dan menyesuaikan diri dengan situasi yang baru.',
+            $score <= 14 => 'memiliki kemampuan yang baik dalam mempelajari hal baru dan menyesuaikan diri dengan situasi yang baru.',
+            $score <= 18 => 'memiliki kemampuan yang sangat baik dalam mempelajari hal baru dan menyesuaikan diri dengan situasi yang baru.',
+            default      => '-',
         };
     }
-
-    // fungsi-fungsi pass criteria (bisa diubah sesuai kebijakan)
-    private static function isPassedSikap(int $score): bool { return $score >= 7; }
-    private static function isPassedKepribadian(int $score): bool { return $score >= 9; }
-    private static function isPassedBelajar(int $score): bool { return $score >= 6; }
 }
