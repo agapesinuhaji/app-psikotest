@@ -1,4 +1,6 @@
+
 <div>
+    
 
     {{-- ================= POPUP INSTRUKSI ================= --}}
     @if($showPopup)
@@ -33,6 +35,138 @@
     @endif
 
 
+<style>
+/* ================= PERTANYAAN ================= */
+
+.question-content {
+    text-align: center;
+}
+
+.question-content p {
+    margin: 0;
+}
+
+.question-content img {
+    max-width: 100%;
+    height: auto;
+    object-fit: contain;
+    display: block;
+    margin: 0 auto;
+
+    /* Batasi tinggi agar tidak terlalu besar */
+    max-height: 220px;
+}
+
+/* Tablet */
+@media (min-width: 640px) {
+    .question-content img {
+        max-height: 260px;
+    }
+}
+
+/* Desktop */
+@media (min-width: 1024px) {
+    .question-content img {
+        max-height: 320px;
+    }
+}
+
+
+/* ================= OPSI ================= */
+
+.option-content {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.option-content p {
+    margin: 0;
+}
+
+.option-content img {
+    max-width: 85%;
+    max-height: 85%;
+    object-fit: contain;
+    display: block;
+}
+
+/* Supaya button tidak membesar aneh */
+.option-button {
+    width: 100%;
+    aspect-ratio: 1 / 1; /* bikin kotak */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ================= GRID RESPONSIVE MANUAL ================= */
+
+.option-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr); /* Mobile 2 */
+    gap: 12px;
+}
+
+/* Tablet */
+@media (min-width: 768px) {
+    .option-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+/* Desktop */
+@media (min-width: 1024px) {
+    .option-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+/* ================= BUTTON STYLE ================= */
+
+.option-button {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    border-radius: 10px;
+    border: 1px solid #d1d5db;
+    background: #f3f4f6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+    transition: all 0.2s ease;
+}
+
+.option-button:hover {
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+.option-button.selected {
+    background: #2563eb;
+    border-color: #1d4ed8;
+}
+
+/* ================= IMAGE CONTROL ================= */
+
+.option-content {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.option-content img {
+    max-width: 85%;
+    max-height: 85%;
+    object-fit: contain;
+}
+
+</style>
+
+
     {{-- ================= LOADING OVERLAY SAAT PINDAH SOAL ================= --}}
     <div
         wire:loading
@@ -58,7 +192,7 @@
     {{-- ================= MAIN WRAPPER ================= --}}
     <div class="{{ $showPopup ? 'blur-sm pointer-events-none select-none' : '' }}">
 
-        <div class="max-w-5xl mx-auto mt-10 p-8 bg-white shadow-xl rounded-xl">
+        <div class="max-w-5xl mx-auto p-4 bg-white shadow-xl rounded-xl">
 
             {{-- TIMER --}}
             <div class="text-right text-red-600 font-bold text-xl mb-4" wire:ignore>
@@ -73,12 +207,24 @@
                 </div>
             </div>
 
-            {{-- ================= PERTANYAAN ================= --}}
-            <div wire:loading.remove wire:target="nextQuestion">
-                <p class="text-xl text-gray-800 mb-3 leading-relaxed">
-                    {!! $question->question !!}
-                </p>
+            {{-- ================= NOMOR SOAL ================= --}}
+            <div class="flex justify-between items-center mb-3">
+
+                <div class="text-sm sm:text-base font-semibold text-gray-600">
+                    Soal {{ $currentIndex + 1 }} dari {{ count($questions) }}
+                </div>
+
+                <div class="text-xs sm:text-sm text-gray-500">
+                    {{ round((($currentIndex + 1) / count($questions)) * 100) }}%
+                </div>
+
             </div>
+
+            {{-- ================= PERTANYAAN ================= --}}
+            <div class="question-content text-center mb-4">
+                {!! $question->question !!}
+            </div>
+
 
             {{-- LOADING KHUSUS AREA SOAL --}}
             <div wire:loading wire:target="nextQuestion" class="py-10 text-center">
@@ -89,31 +235,77 @@
             <div
                 wire:loading.remove
                 wire:target="nextQuestion"
-                class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                class="option-grid">
 
                 @foreach($question->options as $opt)
                     <button
                         wire:click="selectOption({{ $opt->id }})"
-                        class="w-full p-4 border rounded-lg font-medium transition
-                            hover:scale-105 hover:shadow-lg
+                        class="
+                            option-button
                             {{ $selectedOption == $opt->id
-                                ? 'bg-blue-600 text-white border-blue-700'
-                                : 'bg-gray-100 text-gray-800 border-gray-300' }}">
-                        {!! $opt->option !!}
+                                ? 'selected'
+                                : '' }}
+                        ">
+
+                        <div class="option-content">
+                            {!! $opt->option !!}
+                        </div>
+
                     </button>
                 @endforeach
             </div>
 
-            {{-- ================= NEXT BUTTON ================= --}}
-            @if($selectedOption)
+
+
+
+
+            {{-- ================= NAVIGATION BUTTON ================= --}}
+            <div class="mt-6 flex justify-between gap-3">
+
+                {{-- BUTTON KEMBALI --}}
+                <button
+                    wire:click="previousQuestion"
+                    wire:loading.attr="disabled"
+                    @if($currentIndex === 0) disabled @endif
+                    class="
+                        w-1/2
+                        bg-gray-500
+                        text-white
+                        p-4
+                        rounded-lg
+                        font-semibold
+                        shadow
+                        hover:bg-gray-600
+                        transition
+                        disabled:opacity-40
+                        disabled:cursor-not-allowed
+                    ">
+                    Kembali
+                </button>
+
+                {{-- BUTTON SELANJUTNYA --}}
                 <button
                     wire:click="nextQuestion"
                     wire:loading.attr="disabled"
-                    class="mt-6 w-full bg-green-600 text-white p-4 rounded-lg font-semibold shadow
-                           hover:bg-green-700 transition disabled:opacity-60">
-                    Selanjutnya
+                    class="
+                        w-1/2
+                        bg-green-600
+                        text-white
+                        p-4
+                        rounded-lg
+                        font-semibold
+                        shadow
+                        hover:bg-green-700
+                        transition
+                        disabled:opacity-60
+                    "
+                    @if(!$selectedOption) disabled @endif
+                >
+                    {{ $currentIndex == $totalQuestions - 1 ? 'Selesai' : 'Selanjutnya' }}
                 </button>
-            @endif
+
+            </div>
+
 
         </div>
     </div>

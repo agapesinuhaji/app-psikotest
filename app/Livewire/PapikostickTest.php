@@ -22,7 +22,8 @@ class PapikostickTest extends Component
     public $showPopup = true;
     public $showFinishPopup = false;
 
-    // ⏱️ DURASI DALAM DETIK (DB MENYIMPAN MENIT)
+    public $totalQuestions; // ✅ tambahan
+
     #[Locked]
     public int $duration;
 
@@ -30,28 +31,21 @@ class PapikostickTest extends Component
     {
         $user = auth()->user();
 
-        // Ambil atau buat client test
         $this->clientTest = ClientTest::firstOrCreate(
             ['user_id' => $user->id],
             ['papikostick_start_at' => now()]
         );
 
-        // Ambil batch user
         $batch = Batch::findOrFail($user->batch_id);
 
-        // Validasi akses
         if ($user->is_active != 1 || $batch->status !== 'open') {
             abort(403, 'Anda belum memiliki akses ujian.');
         }
 
-        // Ambil type question
         $type = TypeQuestion::where('slug', 'papi-kostick')->firstOrFail();
 
-        // ✅ KONVERSI MENIT → DETIK
-        // Contoh DB: 120 (menit) → 7200 (detik)
         $this->duration = ((int) $type->duration) * 60;
 
-        // Ambil soal
         $this->questions = Question::where('type_question_id', $type->id)
             ->with('options')
             ->orderBy('id')
@@ -60,22 +54,20 @@ class PapikostickTest extends Component
         if ($this->questions->isEmpty()) {
             abort(404, 'Soal Papikostick kosong!');
         }
+
+        // ✅ total soal
+        $this->totalQuestions = $this->questions->count();
     }
 
     public function startTest()
     {
-        // Update waktu mulai
         $this->clientTest->update([
             'papikostick_start_at' => now()
         ]);
 
-        // Tutup popup
         $this->showPopup = false;
 
-        // ⏱️ Jalankan timer (DETIK)
         $this->dispatch('startTimer', duration: $this->duration);
-
-        // Masuk fullscreen
         $this->dispatch('enterFullscreen');
     }
 
@@ -103,14 +95,20 @@ class PapikostickTest extends Component
 
         $this->selectedOption = null;
 
-        if ($this->currentIndex < count($this->questions) - 1) {
+        if ($this->currentIndex < $this->totalQuestions - 1) {
             $this->currentIndex++;
 
-            // Update progress bar
-            $percentage = (($this->currentIndex + 1) / count($this->questions)) * 100;
+            $percentage = (($this->currentIndex + 1) / $this->totalQuestions) * 100;
             $this->dispatch('updateProgress', percentage: $percentage);
         } else {
             $this->finishTest();
+        }
+    }
+
+    public function previousQuestion()
+    {
+        if ($this->currentIndex > 0) {
+            $this->currentIndex--;
         }
     }
 
@@ -122,9 +120,7 @@ class PapikostickTest extends Component
 
         $this->showFinishPopup = true;
 
-        // Matikan proteksi unload
         $this->dispatch('disableUnloadProtection');
-
         $this->dispatch('testFinished');
     }
 
@@ -142,6 +138,7 @@ class PapikostickTest extends Component
             'questions' => $this->questions,
             'selectedOption' => $this->selectedOption,
             'showPopup' => $this->showPopup,
+            'totalQuestions' => $this->totalQuestions,
         ])->layout('layouts.app');
     }
 }

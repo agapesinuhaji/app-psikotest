@@ -49,6 +49,19 @@
                 </div>
             </div>
 
+            {{-- ================= NOMOR SOAL ================= --}}
+            <div class="flex justify-between items-center mb-3">
+
+                <div class="text-sm sm:text-base font-semibold text-gray-600">
+                    Soal {{ $currentIndex + 1 }} dari {{ count($questions) }}
+                </div>
+
+                <div class="text-xs sm:text-sm text-gray-500">
+                    {{ round((($currentIndex + 1) / count($questions)) * 100) }}%
+                </div>
+
+            </div>
+
             {{-- PERTANYAAN --}}
             <p class="text-xl text-gray-800 mb-6 leading-relaxed">
                 {!! $question->question !!}
@@ -69,14 +82,53 @@
                 @endforeach
             </div>
 
-            {{-- TOMBOL SELANJUTNYA --}}
-            @if($selectedOption)
-                <button
-                    wire:click="nextQuestion"
-                    class="mt-6 w-full bg-green-600 text-white p-4 rounded-lg font-semibold shadow hover:bg-green-700 transition">
-                    Selanjutnya
-                </button>
-            @endif
+            
+        {{-- ================= NAVIGATION BUTTON ================= --}}
+        <div class="mt-6 flex justify-between gap-3">
+
+            {{-- BUTTON KEMBALI --}}
+            <button
+                wire:click="previousQuestion"
+                wire:loading.attr="disabled"
+                @if($currentIndex === 0) disabled @endif
+                class="
+                    w-1/2
+                    bg-gray-500
+                    text-white
+                    p-4
+                    rounded-lg
+                    font-semibold
+                    shadow
+                    hover:bg-gray-600
+                    transition
+                    disabled:opacity-40
+                    disabled:cursor-not-allowed
+                ">
+                Kembali
+            </button>
+
+            {{-- BUTTON SELANJUTNYA --}}
+            <button
+                wire:click="nextQuestion"
+                wire:loading.attr="disabled"
+                class="
+                    w-1/2
+                    bg-green-600
+                    text-white
+                    p-4
+                    rounded-lg
+                    font-semibold
+                    shadow
+                    hover:bg-green-700
+                    transition
+                    disabled:opacity-60
+                "
+                @if(!$selectedOption) disabled @endif
+            >
+                {{ $currentIndex == $totalQuestions - 1 ? 'Selesai' : 'Selanjutnya' }}
+            </button>
+
+        </div>
 
         </div>
 

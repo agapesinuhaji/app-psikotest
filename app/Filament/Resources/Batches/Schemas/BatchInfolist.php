@@ -206,6 +206,8 @@ class BatchInfolist
                                     TextEntry::make('name'),
                                     TextEntry::make('username'),
                                     TextEntry::make('plain_password')->label('Password'),
+                                    TextEntry::make('nik')
+                                        ->label('NIK'),
                                     TextEntry::make('birth')
                                         ->label('Place, Date of Birth')
                                         ->state(fn ($record) =>
@@ -214,6 +216,7 @@ class BatchInfolist
                                         ),
                                     TextEntry::make('age'),
                                     TextEntry::make('last_education'),
+                                    TextEntry::make('nama_ayah'),
                                 ])
                                 ->columns(4),
                         ])

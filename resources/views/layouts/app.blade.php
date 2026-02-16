@@ -67,7 +67,7 @@
     <!-- MAIN CONTENT WRAPPER -->
     <div class="min-h-screen relative z-10 bg-transparent">
         
-        @include('layouts.navigation')
+        {{-- @include('layouts.navigation') --}}
 
         @isset($header)
             <header class="bg-white/90 shadow backdrop-blur-sm">

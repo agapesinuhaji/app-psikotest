@@ -15,120 +15,131 @@ use Illuminate\Support\Facades\Auth;
 class SpmTest extends Component
 {
     public $questions;
-    public $currentIndex = 0;
-    public $selectedOption = null;
+    public int $currentIndex = 0;
+
+    public ?int $selectedOption = null;
+
+    public array $answers = []; // ⬅️ SIMPAN JAWABAN
+
     public $clientTest;
 
-    public $showPopup = true;
-    public $showFinishPopup = false;
+    public bool $showPopup = true;
+    public bool $showFinishPopup = false;
 
-    // ⏱️ DURASI DALAM DETIK (DB MENYIMPAN MENIT)
     #[Locked]
     public int $duration;
 
     public function mount()
     {
         $user = auth()->user();
-
-        // Ambil batch user
         $batch = Batch::findOrFail($user->batch_id);
 
-        // Validasi akses
         if ($user->is_active != 1 || $batch->status !== 'open') {
             abort(403, 'Anda belum memiliki akses ujian.');
         }
 
-        // Ambil atau buat client test
         $this->clientTest = ClientTest::firstOrCreate(
             ['user_id' => $user->id],
             ['spm_start_at' => now()]
         );
 
-        // Ambil type question SPM
         $type = TypeQuestion::where('slug', 'spm')->firstOrFail();
-
-        // ✅ KONVERSI MENIT → DETIK
-        // Contoh DB: 60 (menit) → 3600 (detik)
         $this->duration = ((int) $type->duration) * 60;
 
-        // Ambil soal
-        $this->questions = Question::where('type_question_id', $type->id)
-            ->with('options')
+        $this->questions = Question::with('options')
+            ->where('type_question_id', $type->id)
             ->orderBy('id')
             ->get();
 
         if ($this->questions->isEmpty()) {
             abort(404, 'Soal SPM kosong!');
         }
+
+        $this->restoreAnswer();
     }
 
     public function startTest()
     {
-        // Update waktu mulai
-        $this->clientTest->update([
-            'spm_start_at' => now()
-        ]);
-
-        // Tutup popup
+        $this->clientTest->update(['spm_start_at' => now()]);
         $this->showPopup = false;
 
-        // ⏱️ Jalankan timer (DETIK)
         $this->dispatch('startTimer', duration: $this->duration);
-
-        // Masuk fullscreen
         $this->dispatch('enterFullscreen');
     }
 
-    public function selectOption($optionId)
+    public function selectOption(int $optionId)
     {
         $this->selectedOption = $optionId;
+
+        $this->answers[$this->currentQuestion()->id] = $optionId;
     }
 
     public function nextQuestion()
     {
-        $current = $this->questions[$this->currentIndex];
-        $option = Option::findOrFail($this->selectedOption);
-
-        // 1 = benar, 0 = salah
-        $isCorrect = $option->value == 1;
-
-        ClientQuestion::updateOrCreate(
-            [
-                'user_id' => Auth::id(),
-                'question_id' => $current->id,
-            ],
-            [
-                'option_id' => $option->id,
-                'score' => $option->value,
-                'is_correct' => $isCorrect,
-                'is_active' => 1,
-            ]
-        );
-
-        $this->selectedOption = null;
+        $this->saveAnswer();
 
         if ($this->currentIndex < count($this->questions) - 1) {
             $this->currentIndex++;
-
-            // Update progress bar
-            $percentage = (($this->currentIndex + 1) / count($this->questions)) * 100;
-            $this->dispatch('updateProgress', percentage: $percentage);
+            $this->restoreAnswer();
+            $this->updateProgress();
         } else {
             $this->finishTest();
         }
     }
 
+    public function previousQuestion()
+    {
+        if ($this->currentIndex > 0) {
+            $this->currentIndex--;
+            $this->restoreAnswer();
+            $this->updateProgress();
+        }
+    }
+
+    private function saveAnswer()
+    {
+        if (!$this->selectedOption) return;
+
+        $question = $this->currentQuestion();
+        $option = Option::findOrFail($this->selectedOption);
+
+        ClientQuestion::updateOrCreate(
+            [
+                'user_id' => Auth::id(),
+                'question_id' => $question->id,
+            ],
+            [
+                'option_id' => $option->id,
+                'score' => $option->value,
+                'is_correct' => $option->value == 1,
+                'is_active' => 1,
+            ]
+        );
+    }
+
+    private function restoreAnswer()
+    {
+        $this->selectedOption =
+            $this->answers[$this->currentQuestion()->id] ?? null;
+    }
+
+    private function updateProgress()
+    {
+        $percentage = (($this->currentIndex + 1) / count($this->questions)) * 100;
+        $this->dispatch('updateProgress', percentage: $percentage);
+    }
+
+    private function currentQuestion()
+    {
+        return $this->questions[$this->currentIndex];
+    }
+
     public function finishTest()
     {
-        $this->clientTest->update([
-            'spm_end_at' => now()
-        ]);
-
+        $this->clientTest->update(['spm_end_at' => now()]);
         $this->showFinishPopup = true;
 
-        // Matikan proteksi unload
         $this->dispatch('disableUnloadProtection');
-
         $this->dispatch('testFinished');
     }
 
@@ -141,11 +152,9 @@ class SpmTest extends Component
     public function render()
     {
         return view('livewire.spm-test', [
-            'question' => $this->questions[$this->currentIndex],
-            'currentIndex' => $this->currentIndex,
-            'questions' => $this->questions,
-            'selectedOption' => $this->selectedOption,
-            'showPopup' => $this->showPopup,
+            'question' => $this->currentQuestion(),
+            'currentNumber' => $this->currentIndex + 1,
+            'totalQuestions' => count($this->questions),
         ])->layout('layouts.app');
     }
 }
