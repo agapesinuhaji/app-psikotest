@@ -8,9 +8,9 @@ use Filament\Schemas\Components\Actions;
 use Filament\Schemas\Components\Section;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\RepeatableEntry;
+use Filament\Forms\Components\TextInput;
 use App\Services\SPMResultService;
 use App\Services\PapikostickResultService;
-use App\Services\ResultExportService;
 
 class BatchInfolist
 {
@@ -25,8 +25,8 @@ class BatchInfolist
             */
             Section::make('Batch Information')
                 ->schema([
-                    TextEntry::make('name'),
-                    TextEntry::make('status'),
+                    TextEntry::make('name')->label('Nama Batch'),
+                    TextEntry::make('status')->badge(),
                     TextEntry::make('start_time')->dateTime(),
                     TextEntry::make('end_time')->dateTime(),
                 ])
@@ -43,9 +43,6 @@ class BatchInfolist
 
                     Actions::make([
 
-                        // ===========================
-                        // Mulai Batch
-                        // ===========================
                         Action::make('startBatch')
                             ->label('Mulai Batch')
                             ->button()
@@ -83,10 +80,10 @@ class BatchInfolist
                                     \App\Models\ClientTest::updateOrCreate(
                                         ['user_id' => $user->id],
                                         [
-                                            'spm_start_at'          => null,
-                                            'spm_end_at'            => null,
-                                            'papikostick_start_at'  => null,
-                                            'papikostick_end_at'    => null,
+                                            'spm_start_at'         => null,
+                                            'spm_end_at'           => null,
+                                            'papikostick_start_at' => null,
+                                            'papikostick_end_at'   => null,
                                         ]
                                     );
                                 }
@@ -98,16 +95,8 @@ class BatchInfolist
                                     'status'     => 'open',
                                     'start_time' => now(),
                                 ]);
-
-                                \Filament\Notifications\Notification::make()
-                                    ->title('Batch berhasil dimulai')
-                                    ->success()
-                                    ->send();
                             }),
 
-                        // ===========================
-                        // Akhiri Batch
-                        // ===========================
                         Action::make('endBatch')
                             ->label('Akhiri Batch')
                             ->button()
@@ -125,16 +114,8 @@ class BatchInfolist
                                     'status'   => 'closed',
                                     'end_time' => now(),
                                 ]);
-
-                                \Filament\Notifications\Notification::make()
-                                    ->title('Batch diakhiri')
-                                    ->success()
-                                    ->send();
                             }),
 
-                        // ===========================
-                        // Proses Hasil
-                        // ===========================
                         Action::make('processResults')
                             ->label('Proses Hasil')
                             ->button()
@@ -155,70 +136,66 @@ class BatchInfolist
                                 $record->update([
                                     'is_result_processed' => true,
                                 ]);
-
-                                \Filament\Notifications\Notification::make()
-                                    ->title('Hasil berhasil diproses')
-                                    ->success()
-                                    ->send();
                             }),
-
-                        // ===========================
-                        // DOWNLOAD DOCX (LANGKAH 4)
-                        // ===========================
-                        Action::make('downloadResults')
-                            ->label('Download Hasil (DOCX)')
-                            ->button()
-                            ->color('info')
-                            ->icon('heroicon-o-document-arrow-down')
-                            ->visible(fn ($record) => $record->is_result_processed)
-                            ->action(function ($record) {
-
-                                $zipPath = storage_path(
-                                    'app/temp/batch-' . $record->id . '-hasil-psikotes.zip'
-                                );
-
-                                $zip = new \ZipArchive();
-                                $zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE);
-
-                                foreach ($record->users as $user) {
-                                    $docx = \App\Services\ResultDocxService::generate($user);
-                                    $zip->addFile($docx, basename($docx));
-                                }
-
-                                $zip->close();
-
-                                return response()->download($zipPath);
-                            }),
-
 
                     ])
                     ->columnSpanFull(),
 
                     /*
                     |--------------------------------------------------------------------------
-                    | Users List
+                    | Participants Section
                     |--------------------------------------------------------------------------
                     */
-                    RepeatableEntry::make('users')
+                    Section::make('Participants')
+                        ->description('Daftar peserta yang mengikuti batch ini')
                         ->schema([
-                            Section::make()
+
+                            // 🔍 SEARCH INPUT (HANYA 1x)
+                            TextInput::make('participantSearch')
+                                ->label('Cari Peserta')
+                                ->placeholder('Cari nama / username ...')
+                                ->live(debounce: 500)
+                                ->suffixIcon('heroicon-m-magnifying-glass')
+                                ->columnSpanFull(),
+
+                            // 📋 LIST PESERTA
+                            RepeatableEntry::make('users')
+                                ->state(function ($record, $livewire) {
+
+                                    $search = strtolower($livewire->participantSearch ?? '');
+
+                                    return $record->users->filter(function ($user) use ($search) {
+
+                                        if ($search === '') return true;
+
+                                        return str_contains(strtolower($user->name), $search)
+                                            || str_contains(strtolower($user->username), $search)
+                                            || str_contains(strtolower($user->nik ?? ''), $search)
+                                            || str_contains(strtolower($user->nama_ayah ?? ''), $search);
+
+                                    })->values();
+                                })
                                 ->schema([
-                                    TextEntry::make('name'),
-                                    TextEntry::make('username'),
-                                    TextEntry::make('plain_password')->label('Password'),
-                                    TextEntry::make('nik')
-                                        ->label('NIK'),
-                                    TextEntry::make('birth')
-                                        ->label('Place, Date of Birth')
-                                        ->state(fn ($record) =>
-                                            $record->place_of_birth . ', ' .
-                                            \Carbon\Carbon::parse($record->date_of_birth)->format('d M Y')
-                                        ),
-                                    TextEntry::make('age'),
-                                    TextEntry::make('last_education'),
-                                    TextEntry::make('nama_ayah'),
+                                    Section::make()
+                                        ->schema([
+                                            TextEntry::make('name')->label('Nama'),
+                                            TextEntry::make('username'),
+                                            TextEntry::make('plain_password')->label('Password'),
+                                            TextEntry::make('nik')->label('NIK'),
+                                            TextEntry::make('birth')
+                                                ->label('Tempat, Tanggal Lahir')
+                                                ->state(fn ($record) =>
+                                                    $record->place_of_birth . ', ' .
+                                                    \Carbon\Carbon::parse($record->date_of_birth)->format('d M Y')
+                                                ),
+                                            TextEntry::make('age'),
+                                            TextEntry::make('last_education'),
+                                            TextEntry::make('nama_ayah')->label('Nama Ayah'),
+                                        ])
+                                        ->columns(4),
                                 ])
-                                ->columns(4),
+                                ->columnSpanFull(),
+
                         ])
                         ->columnSpanFull(),
 

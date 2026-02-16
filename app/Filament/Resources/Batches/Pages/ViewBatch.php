@@ -16,4 +16,6 @@ class ViewBatch extends ViewRecord
             EditAction::make(),
         ];
     }
+    public $participantSearch = '';
+
 }
