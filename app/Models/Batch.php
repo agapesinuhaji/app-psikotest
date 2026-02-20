@@ -29,4 +29,10 @@ class Batch extends Model
     {
         return $this->hasMany(User::class, 'batch_id');
     }
+
+    public function client()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
 }

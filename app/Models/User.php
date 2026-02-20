@@ -9,6 +9,7 @@ use Illuminate\Notifications\Notifiable;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 
+
 class User extends Authenticatable implements FilamentUser
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
@@ -31,9 +32,11 @@ class User extends Authenticatable implements FilamentUser
         'place_of_birth',
         'date_of_birth',
         'gender',
+        'phone',
         'last_education',
         'age',
         'is_admin',
+        'role',
     ];
 
     /**
@@ -60,9 +63,17 @@ class User extends Authenticatable implements FilamentUser
 
     public function canAccessPanel(Panel $panel): bool
     {
-        // Hanya izinkan jika pengguna adalah admin
-        return $this->is_admin;
+        if ($panel->getId() === 'admin') {
+            return $this->is_admin == 1;
+        }
+
+        if ($panel->getId() === 'client') {
+            return $this->role === 'client';
+        }
+
+        return false;
     }
+
 
     protected static function booted()
     {
@@ -138,5 +149,11 @@ class User extends Authenticatable implements FilamentUser
 
         return $password;
     }
+
+    public function isClient()
+    {
+        return $this->role === 'client';
+    }
+
 
 }

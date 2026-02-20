@@ -1,5 +1,5 @@
-<x-app-layout>
+<x-app2-layout>
     <div class="py-6">
         <livewire:spm-test />
     </div>
-</x-app-layout>
+</x-app2-layout>
