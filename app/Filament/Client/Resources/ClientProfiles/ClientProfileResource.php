@@ -85,4 +85,9 @@ class ClientProfileResource extends Resource
             'edit' => EditClientProfile::route('/{record}/edit'),
         ];
     }
+
+    public static function canViewAny(): bool
+    {
+        return auth()->user()->role === 'client';
+    }
 }

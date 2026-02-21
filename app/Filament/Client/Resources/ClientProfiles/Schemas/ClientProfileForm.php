@@ -27,10 +27,7 @@ class ClientProfileForm
                                 ->maxLength(255),
 
                             TextInput::make('email')
-                                ->label('Email')
-                                ->email()
-                                ->required()
-                                ->unique(ignoreRecord: true),
+                                ->disabled(),
 
                             TextInput::make('phone')
                                 ->label('Phone')
@@ -51,6 +48,12 @@ class ClientProfileForm
 
                 Section::make('Ubah Password')
                     ->schema([
+
+                        TextInput::make('current_password')
+                            ->label('Password Lama')
+                            ->password()
+                            ->requiredWith('password')
+                            ->rule('current_password'),
 
                         TextInput::make('password')
                             ->label('Password Baru')
