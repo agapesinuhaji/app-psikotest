@@ -12,6 +12,7 @@ class Batch extends Model
 
     protected $fillable = [
         'name',
+        'user_id',
         'start_time',
         'end_time',
         'reporting_pdf',
