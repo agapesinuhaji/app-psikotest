@@ -78,6 +78,16 @@ class ClientBatchForm
 
                     Repeater::make('users')
                         ->relationship() // Batch::users()
+                        ->mutateRelationshipDataBeforeCreateUsing(function (array $data, $livewire) {
+
+                            // ambil batch_id dari parent record
+                            $data['batch_id'] = $livewire->record->id ?? null;
+
+                            // paksa role
+                            $data['role'] = 'participant';
+
+                            return $data;
+                        })
                         ->defaultItems(0)
                         ->schema([
 
@@ -111,7 +121,7 @@ class ClientBatchForm
 
                                 // 🔥 set role otomatis sebagai client
                                 Hidden::make('role')
-                                    ->default('client'),
+                                    ->default('participant'),
                             ]),
                         ])
                         ->addActionLabel('Tambah Peserta')

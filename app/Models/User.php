@@ -2,24 +2,16 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 
-
 class User extends Authenticatable implements FilamentUser
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
     protected $fillable = [
         'name',
         'email',
@@ -41,21 +33,11 @@ class User extends Authenticatable implements FilamentUser
         'role',
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
     protected function casts(): array
     {
         return [
@@ -76,7 +58,6 @@ class User extends Authenticatable implements FilamentUser
         return false;
     }
 
-
     protected static function booted()
     {
         static::creating(function ($user) {
@@ -88,47 +69,31 @@ class User extends Authenticatable implements FilamentUser
 
             // 2. Generate Username Otomatis
             $batchId = $user->batch_id ?? 0;
-
             $date = now()->format('md'); 
             $micro = microtime(true);
             $microDigits = preg_replace('/\D/', '', $micro);
             $microSegment = substr($microDigits, -4);
             $random = str_pad(rand(0, 999), 3, '0', STR_PAD_LEFT);
+            $user->username = "{$date}{$batchId}{$microSegment}{$random}";
 
-            $username = "{$date}{$batchId}{$microSegment}{$random}";
-            $user->username = $username;
-
-            // 3. Email otomatis (jika kosong)
+            // 3. Email otomatis
             if (empty($user->email)) {
-                $user->email = $username . '@example.com';
+                $user->email = $user->username . '@example.com';
             }
 
-            // ------------------------------------------------------
-            // 4. PASSWORD BERDASARKAN ROLE
-            // ------------------------------------------------------
-
-            // Jika USER biasa (bukan admin)
+            // 🔥 4. PAKSA ROLE PARTICIPANT (jika bukan admin)
             if ($user->is_admin != 1) {
+                $user->role = $user->role ?? 'participant';
+            }
 
-                // generate password otomatis
+            // 5. Password
+            if ($user->is_admin != 1) {
                 $plainPassword = self::generateRandomPassword(8);
-
-                // simpan plain password
                 $user->plain_password = $plainPassword;
-
-                // hash untuk database
                 $user->password = bcrypt($plainPassword);
-
-            } 
-            // Jika ADMIN → password dari input, tidak diubah
-            else {
-
-                // pastikan password sudah ada dan tinggal hash
+            } else {
                 if (!empty($user->password)) {
-                    // generate password otomatis
                     $plainPassword = self::generateRandomPassword(8);
-
-                    // simpan plain password
                     $user->plain_password = $plainPassword;
                     $user->password = bcrypt($user->password);
                 }
@@ -136,19 +101,13 @@ class User extends Authenticatable implements FilamentUser
         });
     }
 
-
-    /**
-     * Generator password acak
-     */
     private static function generateRandomPassword($length = 8)
     {
         $characters = 'abcdefghijklmnopqrstuvwxyz0123456789';
         $password = '';
-
         for ($i = 0; $i < $length; $i++) {
             $password .= $characters[random_int(0, strlen($characters) - 1)];
         }
-
         return $password;
     }
 
@@ -156,6 +115,4 @@ class User extends Authenticatable implements FilamentUser
     {
         return $this->role === 'client';
     }
-
-
 }
