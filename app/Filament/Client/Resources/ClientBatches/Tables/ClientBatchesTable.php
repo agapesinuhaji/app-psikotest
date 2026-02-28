@@ -111,7 +111,7 @@ class ClientBatchesTable
 
                         $subtotal = $participants * $hargaPerPeserta;
                         $ppn = (int) ($subtotal * 0.11);
-                        $uniqueCode = 0;
+                        $uniqueCode = rand(1, 300);
 
                         $total = $subtotal + $ppn + $uniqueCode;
 
