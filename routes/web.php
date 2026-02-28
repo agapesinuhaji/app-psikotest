@@ -5,6 +5,9 @@ use App\Http\Controllers\DashboardController;
 use App\Exports\ParticipantsTemplateExport;
 use Maatwebsite\Excel\Facades\Excel;
 
+use App\Http\Controllers\MidtransCallbackController;
+use App\Http\Controllers\PaymentController;
+
 Route::get('/', function () {
     return view('welcome');
 });
@@ -27,6 +30,8 @@ Route::get('/client/batches/download-template', function () {
     return Excel::download(new ParticipantsTemplateExport, 'participants_template.xlsx');
 });
 
+Route::post('/midtrans/callback', [MidtransCallbackController::class, 'handle']);
+Route::get('/payment/{orderId}', [PaymentController::class, 'show']);
 
 
 

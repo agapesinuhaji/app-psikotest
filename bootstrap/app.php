@@ -10,10 +10,15 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
-    ->withMiddleware(function (Middleware $middleware): void {
+   ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
-        'client' => \App\Http\Middleware\EnsureClientRole::class,
-    ]);
+            'client' => \App\Http\Middleware\EnsureClientRole::class,
+        ]);
+
+        // ⛔ disable CSRF untuk Midtrans callback
+        $middleware->validateCsrfTokens(except: [
+            'midtrans/callback',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
