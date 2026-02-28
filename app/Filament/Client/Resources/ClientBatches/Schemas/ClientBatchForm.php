@@ -98,6 +98,16 @@ class ClientBatchForm
 
                                 TextInput::make('email')
                                     ->email(),
+                                
+                                TextInput::make('nik')
+                                    ->label('NIK')
+                                    ->required()
+                                    ->maxLength(16)
+                                    ->numeric(),
+
+                                TextInput::make('nama_ayah')
+                                    ->label('Nama Ayah')
+                                    ->required(),
 
                                 TextInput::make('place_of_birth')
                                     ->required(),
