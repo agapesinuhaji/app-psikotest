@@ -13,28 +13,28 @@ class DashboardController extends Controller
     {
         $user = Auth::user();
 
-        // 🔁 Redirect berdasarkan role
-        if ($user->role === 'client') {
-            return redirect('/client');
-        }
+        // ❗ Pastikan hanya PARTICIPANT (client)
+        if ($user->role !== 'participant') {
 
-        if ($user->role === 'administrator') {
-            return redirect('/admin');
+            if ($user->role === 'administrator') {
+                return redirect('/admin');
+            }
+
         }
 
         // ===============================
-        // Default dashboard (jika bukan 2 role di atas)
+        // DASHBOARD PARTICIPANT
         // ===============================
 
         $clientTest = ClientTest::where('user_id', $user->id)->first();
 
         $spm = TypeQuestion::where('status', 'active')
             ->where('slug', 'spm')
-            ->first();
+            ->get();
 
         $papiKostick = TypeQuestion::where('status', 'active')
             ->where('slug', 'papi-kostick')
-            ->first();
+            ->get();
 
         return view('dashboard', compact('clientTest', 'spm', 'papiKostick'));
     }
