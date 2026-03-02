@@ -2,14 +2,12 @@
 
 namespace App\Filament\Psikolog\Resources\PsikologBatches;
 
-use App\Filament\Psikolog\Resources\PsikologBatches\Pages\CreatePsikologBatch;
-use App\Filament\Psikolog\Resources\PsikologBatches\Pages\EditPsikologBatch;
 use App\Filament\Psikolog\Resources\PsikologBatches\Pages\ListPsikologBatches;
 use App\Filament\Psikolog\Resources\PsikologBatches\Pages\ViewPsikologBatch;
 use App\Filament\Psikolog\Resources\PsikologBatches\Schemas\PsikologBatchForm;
 use App\Filament\Psikolog\Resources\PsikologBatches\Schemas\PsikologBatchInfolist;
 use App\Filament\Psikolog\Resources\PsikologBatches\Tables\PsikologBatchesTable;
-use App\Models\PsikologBatch;
+use App\Models\Batch;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -18,11 +16,15 @@ use Filament\Tables\Table;
 
 class PsikologBatchResource extends Resource
 {
-    protected static ?string $model = PsikologBatch::class;
+    protected static ?string $model = Batch::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
-    protected static ?string $recordTitleAttribute = 'Batch';
+    protected static ?string $navigationLabel = 'Batches';
+    protected static ?string $modelLabel = 'Batches';
+    protected static ?string $pluralModelLabel = 'Batches';
+
+    protected static ?string $slug = 'batches';
 
     public static function form(Schema $schema): Schema
     {
@@ -50,9 +52,7 @@ class PsikologBatchResource extends Resource
     {
         return [
             'index' => ListPsikologBatches::route('/'),
-            'create' => CreatePsikologBatch::route('/create'),
             'view' => ViewPsikologBatch::route('/{record}'),
-            'edit' => EditPsikologBatch::route('/{record}/edit'),
         ];
     }
 }
