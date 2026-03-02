@@ -12,7 +12,7 @@
                 id="username" 
                 class="block mt-1 w-full" 
                 type="text" 
-                name="username" 
+                name="login" 
                 :value="old('username')" 
                 required 
                 autofocus 

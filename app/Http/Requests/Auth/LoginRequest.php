@@ -28,7 +28,8 @@ class LoginRequest extends FormRequest
     {
         return [
             // 'email' => ['required', 'string', 'email'],
-            'username' => ['required'],
+            // 'username' => ['required'],
+            'login' => ['required', 'string'],
             'password' => ['required', 'string'],
         ];
     }
@@ -42,11 +43,26 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
-        if (! Auth::attempt($this->only('username', 'password'), $this->boolean('remember'))) {
+        $loginInput = $this->input('login');
+
+        // 🔥 deteksi field login
+        if (filter_var($loginInput, FILTER_VALIDATE_EMAIL)) {
+            $field = 'email';
+        } elseif (is_numeric($loginInput)) {
+            $field = 'nik'; // optional kalau mau pakai NIK juga
+        } else {
+            $field = 'username';
+        }
+
+        if (! Auth::attempt([
+            $field => $loginInput,
+            'password' => $this->input('password'),
+        ], $this->boolean('remember'))) {
+
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([
-                'username' => trans('auth.failed'),
+                'login' => trans('auth.failed'),
             ]);
         }
 
@@ -81,6 +97,8 @@ class LoginRequest extends FormRequest
      */
     public function throttleKey(): string
     {
-        return Str::transliterate(Str::lower($this->string('email')).'|'.$this->ip());
+        return Str::transliterate(
+            Str::lower($this->string('login')) . '|' . $this->ip()
+        );
     }
 }
