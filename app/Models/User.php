@@ -48,19 +48,23 @@ class User extends Authenticatable implements FilamentUser
     }
 
     /**
-     * Hak akses panel Filament
+     * 🛡️ PENGATURAN AKSES DASHBOARD BERDASARKAN ROLE
      */
     public function canAccessPanel(Panel $panel): bool
     {
-        if ($panel->getId() === 'admin') {
-            return $this->is_admin == 1;
-        }
-
-        if ($panel->getId() === 'client') {
-            return $this->role === 'client';
-        }
-
-        return false;
+        return match ($panel->getId()) {
+            // Pintu 1: Khusus Administrator
+            'admin'    => $this->role === 'administrator' || $this->is_admin == 1,
+            
+            // Pintu 2: Khusus Client/Pasien
+            'client'   => $this->role === 'client',
+            
+            // Pintu 3: Khusus Psikolog
+            'psikolog' => $this->role === 'psikolog',
+            
+            // Pintu Lainnya: Tertutup rapat
+            default    => false,
+        };
     }
 
     /**
@@ -80,7 +84,6 @@ class User extends Authenticatable implements FilamentUser
                 throw new \Exception('NIK wajib diisi untuk participant');
             }
 
-            // ❗ pastikan NIK string (agar 0 di depan tidak hilang)
             $user->nik = (string) $user->nik;
 
             // 🔢 Hitung umur otomatis
@@ -88,30 +91,35 @@ class User extends Authenticatable implements FilamentUser
                 ? Carbon::parse($user->date_of_birth)->age
                 : null;
 
-            // 👤 USERNAME = NIK
             $user->username = $user->nik;
 
-            // 📧 Email otomatis jika kosong
             if (empty($user->email)) {
                 $user->email = $user->nik . '@example.com';
             }
 
-            // 🔐 PASSWORD = NIK
             $plainPassword = $user->nik;
-
             $user->plain_password = $plainPassword;
             $user->password = bcrypt($plainPassword);
 
-            // 🔒 force role participant
             $user->role = 'participant';
         });
     }
 
     /**
-     * Helper cek role client
+     * HELPER CHECKERS
      */
-    public function isClient()
+    public function isClient(): bool
     {
         return $this->role === 'client';
+    }
+
+    public function isPsikolog(): bool
+    {
+        return $this->role === 'psikolog';
+    }
+
+    public function isAdministrator(): bool
+    {
+        return $this->role === 'administrator' || $this->is_admin == 1;
     }
 }
