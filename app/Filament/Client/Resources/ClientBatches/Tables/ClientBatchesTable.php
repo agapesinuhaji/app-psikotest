@@ -5,6 +5,7 @@ namespace App\Filament\Client\Resources\ClientBatches\Tables;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
 use Filament\Tables\Table;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\BadgeColumn;
@@ -13,8 +14,6 @@ use Filament\Notifications\Notification;
 
 use App\Models\Payment;
 use App\Services\MidtransService;
-
-
 
 class ClientBatchesTable
 {
@@ -62,7 +61,7 @@ class ClientBatchesTable
                         'warning' => 'pending',
                         'success' => 'paid',
                         'danger' => 'failed',
-                        'gray' => fn ($state) => $state === null, // belum ada pembayaran
+                        'gray' => fn ($state) => $state === null,
                     ])
                     ->formatStateUsing(fn ($state) => match ($state) {
                         'pending' => 'Menunggu',
@@ -78,7 +77,11 @@ class ClientBatchesTable
 
             ->recordActions([
 
-                EditAction::make(),
+                // 🔥 VIEW (SEKARANG SUDAH AMAN)
+                ViewAction::make(),
+
+                EditAction::make()
+                    ->visible(fn ($record) => optional($record->payment)->status !== 'paid'),
 
                 // =====================================
                 // 🔥 ACTION BAYAR MIDTRANS
@@ -87,7 +90,7 @@ class ClientBatchesTable
                     ->label('Bayar')
                     ->icon('heroicon-o-credit-card')
                     ->color('success')
-                    ->visible(fn ($record) => $record->status !== 'paid')
+                    ->visible(fn ($record) => optional($record->payment)->status !== 'paid')
 
                     ->action(function ($record) {
 

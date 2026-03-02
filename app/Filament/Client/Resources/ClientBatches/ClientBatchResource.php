@@ -36,6 +36,11 @@ class ClientBatchResource extends Resource
         return ClientBatchForm::configure($schema);
     }
 
+    public static function infolist(Schema $schema): Schema
+    {
+        return \App\Filament\Resources\Batches\Schemas\BatchInfolist::configure($schema);
+    }
+
     public static function table(Table $table): Table
     {
         return ClientBatchesTable::configure($table);
@@ -54,6 +59,7 @@ class ClientBatchResource extends Resource
             'index' => ListClientBatches::route('/'),
             'create' => CreateClientBatch::route('/create'),
             'edit' => EditClientBatch::route('/{record}/edit'),
+            'view' => Pages\ViewClientBatch::route('/{record}'),
         ];
     }
 
