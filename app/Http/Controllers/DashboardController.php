@@ -20,6 +20,10 @@ class DashboardController extends Controller
                 return redirect('/admin');
             }
 
+            if ($user->role === 'client') {
+                return redirect('/client');
+            }
+
         }
 
         // ===============================
