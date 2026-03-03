@@ -26,27 +26,38 @@ class PsikologBatchInfolist
             */
             Section::make('Batch Information')
                 ->schema([
-                    TextEntry::make('name')->label('Nama Batch'),
-                    TextEntry::make('status')->badge(),
-                    TextEntry::make('start_time')->dateTime(),
-                    TextEntry::make('end_time')->dateTime(),
+                    TextEntry::make('name')
+                        ->label('Nama Batch'),
+
+                    TextEntry::make('status')
+                        ->badge(),
+
+                    TextEntry::make('date')
+                        ->label('Jadwal Test')
+                        ->dateTime('d F Y H:i')
+                        ->placeholder('Belum diatur'),
+
+                    TextEntry::make('start_time')
+                        ->label('Waktu Mulai')
+                        ->dateTime('d F Y H:i')
+                        ->placeholder('-'),
+
+                    TextEntry::make('end_time')
+                        ->label('Waktu Selesai')
+                        ->dateTime('d F Y H:i')
+                        ->placeholder('-'),
                 ])
                 ->columns(2)
                 ->columnSpanFull(),
 
-
-            
             /*
-            |------------------------------------------------------------------
+            |--------------------------------------------------------------------------
             | PAYMENT
-            |------------------------------------------------------------------
+            |--------------------------------------------------------------------------
             */
             Section::make('Pembayaran')
                 ->schema([
 
-                    // =========================
-                    // 🔢 RINGKASAN BIAYA
-                    // =========================
                     TextEntry::make('participants')
                         ->label('Jumlah Peserta')
                         ->state(fn ($record) => $record->users()->count()),
@@ -77,13 +88,12 @@ class PsikologBatchInfolist
                         }),
 
                 ])
-                ->columns(2) // 🔥 biar rapi 2 kolom
+                ->columns(2)
                 ->columnSpanFull(),
-
 
             /*
             |--------------------------------------------------------------------------
-            | Actions
+            | ACTIONS (PSIKOLOG)
             |--------------------------------------------------------------------------
             */
             Section::make()
@@ -91,14 +101,77 @@ class PsikologBatchInfolist
 
                     Actions::make([
 
+                        /*
+                        |--------------------------------------------------------------------------
+                        | START BATCH
+                        |--------------------------------------------------------------------------
+                        */
                         Action::make('startBatch')
                             ->label('Mulai Batch')
                             ->button()
                             ->color('success')
                             ->icon('heroicon-o-play')
-                            ->visible(fn ($record) => $record->status === 'standby')
+                            ->visible(fn ($record) =>
+                                $record->status === 'time set'
+                                && $record->payment?->status === 'paid'
+                            )
                             ->requiresConfirmation()
-                            ->action(function ($record) {
+                            ->form([
+                                \Filament\Forms\Components\TextInput::make('password')
+                                    ->label('Konfirmasi Code')
+                                    ->password()
+                                    ->required()
+                                    ->revealable(),
+                            ])
+                            ->action(function ($record, array $data) {
+
+                                /*
+                                |--------------------------------------------------------------------------
+                                | 1️⃣ VALIDASI TANGGAL
+                                |--------------------------------------------------------------------------
+                                */
+
+                                if (!$record->date) {
+                                    Notification::make()
+                                        ->danger()
+                                        ->title('Tanggal batch belum diatur')
+                                        ->send();
+
+                                    return;
+                                }
+
+                                if (now()->lt(\Carbon\Carbon::parse($record->date))) {
+                                    Notification::make()
+                                        ->danger()
+                                        ->title('Batch belum bisa dimulai sebelum tanggal yang ditentukan')
+                                        ->send();
+
+                                    return;
+                                }
+
+                                /*
+                                |--------------------------------------------------------------------------
+                                | 2️⃣ VALIDASI PASSWORD PSIKOLOG LOGIN
+                                |--------------------------------------------------------------------------
+                                */
+
+                                if (!\Illuminate\Support\Facades\Hash::check(
+                                    $data['password'],
+                                    auth()->user()->password
+                                )) {
+                                    Notification::make()
+                                        ->danger()
+                                        ->title('Password salah')
+                                        ->send();
+
+                                    return;
+                                }
+
+                                /*
+                                |--------------------------------------------------------------------------
+                                | 3️⃣ JALANKAN START BATCH
+                                |--------------------------------------------------------------------------
+                                */
 
                                 $users   = $record->users;
                                 $userIds = $users->pluck('id');
@@ -108,6 +181,7 @@ class PsikologBatchInfolist
                                 $questions = \App\Models\Question::pluck('id')->toArray();
 
                                 foreach ($users as $user) {
+
                                     $shuffled = $questions;
                                     shuffle($shuffled);
 
@@ -122,9 +196,7 @@ class PsikologBatchInfolist
                                             ]
                                         );
                                     }
-                                }
 
-                                foreach ($users as $user) {
                                     \App\Models\ClientTest::updateOrCreate(
                                         ['user_id' => $user->id],
                                         [
@@ -143,15 +215,55 @@ class PsikologBatchInfolist
                                     'status'     => 'open',
                                     'start_time' => now(),
                                 ]);
-                            }),
 
+                                Notification::make()
+                                    ->success()
+                                    ->title('Batch berhasil dimulai')
+                                    ->send();
+                            }),
+                            /*
+                        |--------------------------------------------------------------------------
+                        | END BATCH
+                        |--------------------------------------------------------------------------
+                        */
                         Action::make('endBatch')
                             ->label('Akhiri Batch')
                             ->button()
                             ->color('danger')
                             ->visible(fn ($record) => $record->status === 'open')
                             ->requiresConfirmation()
-                            ->action(function ($record) {
+                            ->form([
+                                \Filament\Forms\Components\TextInput::make('password')
+                                    ->label('Konfirmasi Code')
+                                    ->password()
+                                    ->required()
+                                    ->revealable(),
+                            ])
+                            ->action(function ($record, array $data) {
+
+                                /*
+                                |--------------------------------------------------------------------------
+                                | 1️⃣ VALIDASI PASSWORD PSIKOLOG LOGIN
+                                |--------------------------------------------------------------------------
+                                */
+
+                                if (!\Illuminate\Support\Facades\Hash::check(
+                                    $data['password'],
+                                    auth()->user()->password
+                                )) {
+                                    \Filament\Notifications\Notification::make()
+                                        ->danger()
+                                        ->title('Password salah')
+                                        ->send();
+
+                                    return;
+                                }
+
+                                /*
+                                |--------------------------------------------------------------------------
+                                | 2️⃣ PROSES AKHIRI BATCH
+                                |--------------------------------------------------------------------------
+                                */
 
                                 $userIds = $record->users->pluck('id');
 
@@ -162,10 +274,19 @@ class PsikologBatchInfolist
                                     'status'   => 'closed',
                                     'end_time' => now(),
                                 ]);
-                            }),
 
+                                \Filament\Notifications\Notification::make()
+                                    ->success()
+                                    ->title('Batch berhasil diakhiri')
+                                    ->send();
+                            }),
+                        /*
+                        |--------------------------------------------------------------------------
+                        | PROCESS RESULTS
+                        |--------------------------------------------------------------------------
+                        */
                         Action::make('processResults')
-                            ->label('Proses Hasil')
+                            ->label('Hitung Hasil')
                             ->button()
                             ->color('primary')
                             ->icon('heroicon-o-cog')
@@ -174,8 +295,37 @@ class PsikologBatchInfolist
                                 && ! $record->is_result_processed
                             )
                             ->requiresConfirmation()
-                            ->action(function ($record) {
+                            ->form([
+                                \Filament\Forms\Components\TextInput::make('password')
+                                    ->label('Konfirmasi Code')
+                                    ->password()
+                                    ->required()
+                                    ->revealable(),
+                            ])
+                            ->action(function ($record, array $data) {
 
+                                /*
+                                |------------------------------------------------------------------
+                                | 1️⃣ VALIDASI PASSWORD PSIKOLOG LOGIN
+                                |------------------------------------------------------------------
+                                */
+                                if (!\Illuminate\Support\Facades\Hash::check(
+                                    $data['password'],
+                                    auth()->user()->password
+                                )) {
+                                    \Filament\Notifications\Notification::make()
+                                        ->danger()
+                                        ->title('Password salah')
+                                        ->send();
+
+                                    return;
+                                }
+
+                                /*
+                                |------------------------------------------------------------------
+                                | 2️⃣ PROSES HITUNG HASIL
+                                |------------------------------------------------------------------
+                                */
                                 foreach ($record->users as $user) {
                                     SPMResultService::processUser($user->id);
                                     PapikostickResultService::processUser($user->id);
@@ -184,21 +334,43 @@ class PsikologBatchInfolist
                                 $record->update([
                                     'is_result_processed' => true,
                                 ]);
+
+                                \Filament\Notifications\Notification::make()
+                                    ->success()
+                                    ->title('Hasil berhasil diproses')
+                                    ->send();
                             }),
+
+                        /*
+                        |--------------------------------------------------------------------------
+                        | DOWNLOAD RESULTS
+                        |--------------------------------------------------------------------------
+                        */
+                        Action::make('downloadResults')
+                            ->label('Download Hasil')
+                            ->button()
+                            ->color('gray')
+                            ->icon('heroicon-o-arrow-down-tray')
+                            ->visible(fn ($record) =>
+                                $record->is_result_processed
+                            )
+                            ->url(fn ($record) =>
+                                route('batches.download.results', $record)
+                            )
+                            ->openUrlInNewTab(),
 
                     ])
                     ->columnSpanFull(),
 
                     /*
                     |--------------------------------------------------------------------------
-                    | Participants Section
+                    | PARTICIPANTS
                     |--------------------------------------------------------------------------
                     */
                     Section::make('Participants')
                         ->description('Daftar peserta batch ini')
                         ->schema([
 
-                            // 🔍 SEARCH INPUT
                             TextInput::make('participantSearch')
                                 ->label('Cari Peserta')
                                 ->placeholder('Cari nama / NIK ...')
@@ -206,7 +378,6 @@ class PsikologBatchInfolist
                                 ->suffixIcon('heroicon-m-magnifying-glass')
                                 ->columnSpanFull(),
 
-                            // 📋 LIST PESERTA
                             RepeatableEntry::make('users')
                                 ->state(function ($record, $livewire) {
 
@@ -217,9 +388,7 @@ class PsikologBatchInfolist
                                         if ($search === '') return true;
 
                                         return str_contains(strtolower($user->name), $search)
-                                            || str_contains(strtolower($user->username), $search)
-                                            || str_contains(strtolower($user->nik ?? ''), $search)
-                                            || str_contains(strtolower($user->nama_ayah ?? ''), $search);
+                                            || str_contains(strtolower($user->nik ?? ''), $search);
 
                                     })->values();
                                 })

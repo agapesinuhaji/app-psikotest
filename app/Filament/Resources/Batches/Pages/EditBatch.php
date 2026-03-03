@@ -21,35 +21,66 @@ class EditBatch extends EditRecord
     {
         $record = $this->record;
 
-        // 🔒 Hanya jalan jika status masih paid
+        /*
+        |--------------------------------------------------------------------------
+        | Hanya jalan jika:
+        | - Status batch masih 'paid'
+        | - Payment juga sudah 'paid'
+        |--------------------------------------------------------------------------
+        */
         if ($record->status !== 'paid') {
             return;
         }
 
-        // 🔒 Hanya jalan jika tanggal berubah
-        if ($record->getOriginal('date') === $record->date) {
+        if ($record->payment?->status !== 'paid') {
             return;
         }
 
-        // 🔒 Pastikan tanggal sudah diisi
+        /*
+        |--------------------------------------------------------------------------
+        | Pastikan tanggal sudah diisi
+        |--------------------------------------------------------------------------
+        */
         if (! $record->date) {
             return;
         }
 
-        $users   = $record->users;
-        $userIds = $users->pluck('id');
+        /*
+        |--------------------------------------------------------------------------
+        | Pastikan field date benar-benar berubah
+        |--------------------------------------------------------------------------
+        */
+        if (! $record->wasChanged('date')) {
+            return;
+        }
+
+        $users = $record->users;
 
         if ($users->isEmpty()) {
             return;
         }
 
-        // 🧹 Hapus soal lama (jika ada)
+        $userIds = $users->pluck('id');
+
+        /*
+        |--------------------------------------------------------------------------
+        | Hapus soal lama
+        |--------------------------------------------------------------------------
+        */
         \App\Models\ClientQuestion::whereIn('user_id', $userIds)->delete();
 
-        // 📦 Ambil semua soal
+        /*
+        |--------------------------------------------------------------------------
+        | Ambil semua soal
+        |--------------------------------------------------------------------------
+        */
         $questions = \App\Models\Question::pluck('id')->toArray();
 
-        // 🎲 Generate soal acak per user
+        /*
+        |--------------------------------------------------------------------------
+        | Generate soal acak per user
+        |--------------------------------------------------------------------------
+        */
         foreach ($users as $user) {
 
             $shuffled = $questions;
@@ -63,7 +94,11 @@ class EditBatch extends EditRecord
                 ]);
             }
 
-            // Reset ClientTest
+            /*
+            |--------------------------------------------------------------------------
+            | Reset waktu test
+            |--------------------------------------------------------------------------
+            */
             \App\Models\ClientTest::updateOrCreate(
                 ['user_id' => $user->id],
                 [
@@ -75,9 +110,20 @@ class EditBatch extends EditRecord
             );
         }
 
-        // 🔄 Update status jadi time_set
+        /*
+        |--------------------------------------------------------------------------
+        | Update status menjadi 'time set'
+        |--------------------------------------------------------------------------
+        */
         $record->update([
             'status' => 'time set',
+        ]);
+    }
+
+    protected function getRedirectUrl(): string
+    {
+        return BatchResource::getUrl('view', [
+            'record' => $this->record,
         ]);
     }
 }
