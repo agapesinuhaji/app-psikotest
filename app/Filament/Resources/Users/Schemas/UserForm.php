@@ -6,6 +6,7 @@ use Filament\Schemas\Schema;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\FileUpload;
+use Illuminate\Support\Facades\Hash;
 
 class UserForm
 {
@@ -31,6 +32,7 @@ class UserForm
                     ->required(fn ($context) => $context === 'create')
                     ->revealable()
                     ->dehydrated(fn ($state) => filled($state))
+                    ->dehydrateStateUsing(fn ($state) => Hash::make($state)) // 👈 WAJIB
                     ->disabled(fn ($context, $record) =>
                         $context === 'edit' && auth()->user()->role === 'admin'
                     ),

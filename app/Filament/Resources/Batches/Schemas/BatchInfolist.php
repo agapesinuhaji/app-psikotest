@@ -9,8 +9,6 @@ use Filament\Schemas\Components\Section;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Forms\Components\TextInput;
-use App\Services\SPMResultService;
-use App\Services\PapikostickResultService;
 
 class BatchInfolist
 {
@@ -35,7 +33,7 @@ class BatchInfolist
 
             /*
             |--------------------------------------------------------------------------
-            | Actions
+            | Actions (ADMIN ONLY)
             |--------------------------------------------------------------------------
             */
             Section::make()
@@ -43,6 +41,12 @@ class BatchInfolist
 
                     Actions::make([
 
+                        /*
+                        |--------------------------------------------------------------------------
+                        | START BATCH (Dipindahkan ke Psikolog)
+                        |--------------------------------------------------------------------------
+                        */
+                        /*
                         Action::make('startBatch')
                             ->label('Mulai Batch')
                             ->button()
@@ -51,52 +55,16 @@ class BatchInfolist
                             ->visible(fn ($record) => $record->status === 'standby')
                             ->requiresConfirmation()
                             ->action(function ($record) {
-
-                                $users   = $record->users;
-                                $userIds = $users->pluck('id');
-
-                                \App\Models\ClientQuestion::whereIn('user_id', $userIds)->delete();
-
-                                $questions = \App\Models\Question::pluck('id')->toArray();
-
-                                foreach ($users as $user) {
-                                    $shuffled = $questions;
-                                    shuffle($shuffled);
-
-                                    foreach ($shuffled as $order => $questionId) {
-                                        \App\Models\ClientQuestion::updateOrCreate(
-                                            [
-                                                'user_id'     => $user->id,
-                                                'question_id' => $questionId,
-                                            ],
-                                            [
-                                                'order' => $order + 1,
-                                            ]
-                                        );
-                                    }
-                                }
-
-                                foreach ($users as $user) {
-                                    \App\Models\ClientTest::updateOrCreate(
-                                        ['user_id' => $user->id],
-                                        [
-                                            'spm_start_at'         => null,
-                                            'spm_end_at'           => null,
-                                            'papikostick_start_at' => null,
-                                            'papikostick_end_at'   => null,
-                                        ]
-                                    );
-                                }
-
-                                \App\Models\User::whereIn('id', $userIds)
-                                    ->update(['is_active' => 1]);
-
-                                $record->update([
-                                    'status'     => 'open',
-                                    'start_time' => now(),
-                                ]);
+                                // Logic dipindah ke PsikologBatchInfolist
                             }),
+                        */
 
+                        /*
+                        |--------------------------------------------------------------------------
+                        | END BATCH (Dipindahkan ke Psikolog)
+                        |--------------------------------------------------------------------------
+                        */
+                        /*
                         Action::make('endBatch')
                             ->label('Akhiri Batch')
                             ->button()
@@ -104,18 +72,16 @@ class BatchInfolist
                             ->visible(fn ($record) => $record->status === 'open')
                             ->requiresConfirmation()
                             ->action(function ($record) {
-
-                                $userIds = $record->users->pluck('id');
-
-                                \App\Models\User::whereIn('id', $userIds)
-                                    ->update(['is_active' => 0]);
-
-                                $record->update([
-                                    'status'   => 'closed',
-                                    'end_time' => now(),
-                                ]);
+                                // Logic dipindah ke PsikologBatchInfolist
                             }),
+                        */
 
+                        /*
+                        |--------------------------------------------------------------------------
+                        | PROCESS RESULTS (Dipindahkan ke Psikolog)
+                        |--------------------------------------------------------------------------
+                        */
+                        /*
                         Action::make('processResults')
                             ->label('Proses Hasil')
                             ->button()
@@ -127,16 +93,27 @@ class BatchInfolist
                             )
                             ->requiresConfirmation()
                             ->action(function ($record) {
-
-                                foreach ($record->users as $user) {
-                                    SPMResultService::processUser($user->id);
-                                    PapikostickResultService::processUser($user->id);
-                                }
-
-                                $record->update([
-                                    'is_result_processed' => true,
-                                ]);
+                                // Logic dipindah ke PsikologBatchInfolist
                             }),
+                        */
+
+                        /*
+                        |--------------------------------------------------------------------------
+                        | DOWNLOAD RESULTS (Admin boleh)
+                        |--------------------------------------------------------------------------
+                        */
+                        Action::make('downloadResults')
+                            ->label('Download Hasil')
+                            ->button()
+                            ->color('primary')
+                            ->icon('heroicon-o-arrow-down-tray')
+                            ->visible(fn ($record) =>
+                                $record->is_result_processed
+                            )
+                            ->url(fn ($record) =>
+                                route('batches.download.results', $record)
+                            )
+                            ->openUrlInNewTab(),
 
                     ])
                     ->columnSpanFull(),
@@ -150,7 +127,6 @@ class BatchInfolist
                         ->description('Daftar peserta yang mengikuti batch ini')
                         ->schema([
 
-                            // 🔍 SEARCH INPUT (HANYA 1x)
                             TextInput::make('participantSearch')
                                 ->label('Cari Peserta')
                                 ->placeholder('Cari nama / username ...')
@@ -158,7 +134,6 @@ class BatchInfolist
                                 ->suffixIcon('heroicon-m-magnifying-glass')
                                 ->columnSpanFull(),
 
-                            // 📋 LIST PESERTA
                             RepeatableEntry::make('users')
                                 ->state(function ($record, $livewire) {
 

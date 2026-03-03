@@ -13,7 +13,8 @@ class ViewBatch extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
-            EditAction::make(),
+            EditAction::make()
+                ->visible(fn ($record) => $record->status === 'paid'),
         ];
     }
     public $participantSearch = '';
