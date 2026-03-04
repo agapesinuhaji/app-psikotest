@@ -24,6 +24,10 @@ class DashboardController extends Controller
                 return redirect('/client');
             }
 
+            if ($user->role === 'psikolog') {
+                return redirect('/psikolog');
+            }
+
         }
 
         // ===============================
