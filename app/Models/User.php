@@ -50,20 +50,30 @@ class User extends Authenticatable implements FilamentUser
     /**
      * 🛡️ PENGATURAN AKSES DASHBOARD BERDASARKAN ROLE
      */
-    public function canAccessPanel(Panel $panel): bool
+   public function canAccessPanel(Panel $panel): bool
     {
+        // 🔥 Blokir semua user nonaktif
+        if (! $this->is_active) {
+            return false;
+        }
+
         return match ($panel->getId()) {
-            // Pintu 1: Khusus Administrator
-            'admin'    => $this->role === 'administrator' || $this->is_admin == 1,
-            
-            // Pintu 2: Khusus Client/Pasien
-            'client'   => $this->role === 'client',
-            
-            // Pintu 3: Khusus Psikolog
-            'psikolog' => $this->role === 'psikolog',
-            
-            // Pintu Lainnya: Tertutup rapat
-            default    => false,
+
+            // Panel Admin
+            'admin' => 
+                $this->role === 'administrator' 
+                || $this->is_admin == 1,
+
+            // Panel Client
+            'client' => 
+                $this->role === 'client',
+
+            // Panel Psikolog
+            'psikolog' => 
+                $this->role === 'psikolog',
+
+            // Panel lainnya
+            default => false,
         };
     }
 

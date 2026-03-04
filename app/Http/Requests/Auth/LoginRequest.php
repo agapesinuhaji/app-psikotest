@@ -39,36 +39,34 @@ class LoginRequest extends FormRequest
      *
      * @throws \Illuminate\Validation\ValidationException
      */
-    public function authenticate(): void
+   public function authenticate(): void
     {
         $this->ensureIsNotRateLimited();
 
         $loginInput = $this->input('login');
 
-        // 🔥 deteksi field login
+        // 🔥 Deteksi field login
         if (filter_var($loginInput, FILTER_VALIDATE_EMAIL)) {
             $field = 'email';
-        } elseif (is_numeric($loginInput)) {
-            $field = 'nik'; // optional kalau mau pakai NIK juga
-        } else {
+        }  else {
             $field = 'username';
         }
 
         if (! Auth::attempt([
-            $field => $loginInput,
-            'password' => $this->input('password'),
+            $field      => $loginInput,
+            'password'  => $this->input('password'),
+            'is_active' => true, // 🔥 hanya user aktif yang bisa login
         ], $this->boolean('remember'))) {
 
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([
-                'login' => trans('auth.failed'),
+                'login' => 'Akun tidak aktif atau kredensial salah.',
             ]);
         }
 
         RateLimiter::clear($this->throttleKey());
     }
-
     /**
      * Ensure the login request is not rate limited.
      *
