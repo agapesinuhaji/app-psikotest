@@ -347,17 +347,30 @@ class PsikologBatchInfolist
                         |--------------------------------------------------------------------------
                         */
                         Action::make('downloadResults')
-                            ->label('Download Hasil')
+                            ->label('Download Hasil (DOCX)')
                             ->button()
-                            ->color('gray')
-                            ->icon('heroicon-o-arrow-down-tray')
-                            ->visible(fn ($record) =>
-                                $record->is_result_processed
-                            )
-                            ->url(fn ($record) =>
-                                route('batches.download.results', $record)
-                            )
-                            ->openUrlInNewTab(),
+                            ->color('info')
+                            ->icon('heroicon-o-document-arrow-down')
+                            ->visible(fn ($record) => $record->is_result_processed)
+                            ->action(function ($record) {
+
+                                $zipPath = storage_path(
+                                    'app/temp/batch-' . $record->id . '-hasil-psikotes.zip'
+                                );
+
+                                $zip = new \ZipArchive();
+                                $zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE);
+
+                                foreach ($record->users as $user) {
+                                    $docx = \App\Services\ResultDocxService::generate($user);
+                                    $zip->addFile($docx, basename($docx));
+                                }
+
+                                $zip->close();
+
+                                return response()->download($zipPath);
+                            }),
+
 
                     ])
                     ->columnSpanFull(),
