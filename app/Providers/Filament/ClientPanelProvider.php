@@ -2,22 +2,29 @@
 
 namespace App\Providers\Filament;
 
-use Filament\Http\Middleware\Authenticate; // Pastikan ini ter-import
+use Filament\Panel;
+use Filament\PanelProvider;
+use Filament\Pages\Dashboard;
+use Filament\Support\Colors\Color;
+
+use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
-use Filament\Pages\Dashboard;
-use Filament\Panel;
-use Filament\PanelProvider;
-use Filament\Support\Colors\Color;
+
 use Filament\Widgets\AccountWidget;
 use Filament\Widgets\FilamentInfoWidget;
+
+use Illuminate\Support\Facades\Route;
+
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
+
+use App\Http\Controllers\ClientBatchTemplateController;
 
 class ClientPanelProvider extends PanelProvider
 {
@@ -26,19 +33,60 @@ class ClientPanelProvider extends PanelProvider
         return $panel
             ->id('client')
             ->path('client')
+
             ->colors([
                 'primary' => Color::Amber,
             ])
-            ->discoverResources(in: app_path('Filament/Client/Resources'), for: 'App\Filament\Client\Resources')
-            ->discoverPages(in: app_path('Filament/Client/Pages'), for: 'App\Filament\Client\Pages')
+
+            /*
+            |--------------------------------------------------------------------------
+            | Resources, Pages & Widgets
+            |--------------------------------------------------------------------------
+            */
+
+            ->discoverResources(
+                in: app_path('Filament/Client/Resources'),
+                for: 'App\\Filament\\Client\\Resources'
+            )
+
+            ->discoverPages(
+                in: app_path('Filament/Client/Pages'),
+                for: 'App\\Filament\\Client\\Pages'
+            )
+
             ->pages([
                 Dashboard::class,
             ])
-            ->discoverWidgets(in: app_path('Filament/Client/Widgets'), for: 'App\Filament\Client\Widgets')
+
+            ->discoverWidgets(
+                in: app_path('Filament/Client/Widgets'),
+                for: 'App\\Filament\\Client\\Widgets'
+            )
+
             ->widgets([
                 AccountWidget::class,
                 FilamentInfoWidget::class,
             ])
+
+            /*
+            |--------------------------------------------------------------------------
+            | 🔥 Custom Routes Inside Client Panel
+            |--------------------------------------------------------------------------
+            */
+
+            ->routes(function () {
+                Route::get(
+                    '/batches/download-template',
+                    [ClientBatchTemplateController::class, 'download']
+                )->name('client.batches.download-template');
+            })
+
+            /*
+            |--------------------------------------------------------------------------
+            | Middleware Stack
+            |--------------------------------------------------------------------------
+            */
+
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
@@ -50,10 +98,15 @@ class ClientPanelProvider extends PanelProvider
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
             ])
+
+            /*
+            |--------------------------------------------------------------------------
+            | Authentication Middleware (Panel Auth)
+            |--------------------------------------------------------------------------
+            */
+
             ->authMiddleware([
-                // 🔥 PERBAIKAN DI SINI:
-                // Gunakan middleware bawaan Filament agar canAccessPanel di model User dipanggil.
-                Authenticate::class, 
+                Authenticate::class,
             ]);
     }
 }

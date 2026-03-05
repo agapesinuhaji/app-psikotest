@@ -50,8 +50,10 @@ class ClientBatchForm
 
                     Placeholder::make('download_template')
                         ->content(new HtmlString(
-                            '<a href="/client/batches/download-template" target="_blank" style="color:#2563eb;font-weight:600">
-                                ⬇ Download Template Excel
+                            '<a href="' . route('client.batches.download-template') . '" 
+                            target="_blank" 
+                            style="color:#2563eb;font-weight:600">
+                            ⬇ Download Template Excel
                             </a>'
                         )),
 

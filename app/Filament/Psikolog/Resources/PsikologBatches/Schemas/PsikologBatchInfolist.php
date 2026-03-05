@@ -161,7 +161,7 @@ class PsikologBatchInfolist
                                 )) {
                                     Notification::make()
                                         ->danger()
-                                        ->title('Password salah')
+                                        ->title('Code Salah')
                                         ->send();
 
                                     return;
@@ -253,7 +253,7 @@ class PsikologBatchInfolist
                                 )) {
                                     \Filament\Notifications\Notification::make()
                                         ->danger()
-                                        ->title('Password salah')
+                                        ->title('Code Salah')
                                         ->send();
 
                                     return;
@@ -315,7 +315,7 @@ class PsikologBatchInfolist
                                 )) {
                                     \Filament\Notifications\Notification::make()
                                         ->danger()
-                                        ->title('Password salah')
+                                        ->title('Code Salah')
                                         ->send();
 
                                     return;
