@@ -89,6 +89,7 @@ class ClientBatchInfolist
                         }),
 
                     Actions::make([
+                        // tombol bayar
                         Action::make('pay')
                             ->label('Bayar Sekarang')
                             ->icon('heroicon-o-credit-card')
@@ -141,9 +142,28 @@ class ClientBatchInfolist
 
                                 return redirect('/payment/' . $orderId);
                             }),
+
+                        // tombol download PDF
+                        // Action::make('download_users_pdf')
+                        //     ->label('Download List User PDF')
+                        //     ->icon('heroicon-o-arrow-down-tray')
+                        //     ->color('primary')
+                        //     ->visible(fn ($record) => $record->status === 'paid')
+                        //     ->action(function ($record) {
+                        //         $users = $record->users;
+
+                        //         $html = view('pdf.user_list', compact('users'))->render();
+
+                        //         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html)->setPaper('a4', 'landscape');
+
+                        //         return response()->streamDownload(
+                        //             fn() => print($pdf->output()),
+                        //             'List_User_Batch_' . $record->id . '.pdf'
+                        //         );
+                        //     }),
                     ])->columnSpanFull(),
                 ])
-                ->columns(2) // 🔥 biar rapi 2 kolom
+                ->columns(2)
                 ->columnSpanFull(),
 
             /*

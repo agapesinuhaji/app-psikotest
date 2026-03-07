@@ -26,8 +26,10 @@ class ParticipantsImport implements ToCollection, WithHeadingRow
 
         foreach ($rows as $row) {
 
-            // 🔥 normalisasi key (hindari spasi / kapital)
-            $row = collect($row)->mapWithKeys(fn ($v, $k) => [Str::lower(trim($k)) => $v])->toArray();
+            // 🔥 normalisasi key header (hindari spasi / kapital)
+            $row = collect($row)
+                ->mapWithKeys(fn ($v, $k) => [Str::lower(trim($k)) => $v])
+                ->toArray();
 
             $name  = $row['name'] ?? null;
             $email = strtolower(trim($row['email'] ?? ''));
@@ -38,8 +40,11 @@ class ParticipantsImport implements ToCollection, WithHeadingRow
             $gender       = $row['gender'] ?? null;
             $education    = $row['last_education'] ?? null;
 
-            // 🔥 format tanggal
+            /**
+             * 🔥 format tanggal lahir
+             */
             $dateOfBirth = null;
+
             if (!empty($row['date_of_birth'])) {
                 try {
                     $dateOfBirth = Carbon::parse($row['date_of_birth'])->format('Y-m-d');
@@ -48,23 +53,30 @@ class ParticipantsImport implements ToCollection, WithHeadingRow
                 }
             }
 
-            // 🔥 format phone
+            /**
+             * 🔥 format nomor HP
+             */
             $phone = $this->formatPhone($row['phone'] ?? '');
 
-            // skip kalau tidak ada email & phone
+            // skip kalau email dan phone kosong
             if (!$email && !$phone) {
                 continue;
             }
 
-            // 🔍 cek duplicate dalam batch
+            /**
+             * 🔍 cek duplikasi dalam batch yang sama
+             */
             $exists = User::where('batch_id', $this->batchId)
                 ->where(function ($q) use ($email, $phone) {
+
                     if ($email) {
                         $q->orWhere('email', $email);
                     }
+
                     if ($phone) {
                         $q->orWhere('phone', $phone);
                     }
+
                 })
                 ->exists();
 
@@ -73,7 +85,9 @@ class ParticipantsImport implements ToCollection, WithHeadingRow
                 continue;
             }
 
-            // 💾 simpan ke database
+            /**
+             * 💾 simpan peserta
+             */
             User::create([
                 'batch_id'        => $this->batchId,
                 'name'            => $name,
@@ -92,18 +106,30 @@ class ParticipantsImport implements ToCollection, WithHeadingRow
             $inserted++;
         }
 
-        // ✅ notif sukses
+        /**
+         * ✅ NOTIFIKASI IMPORT BERHASIL
+         */
         FilamentNotification::make()
             ->title("Import selesai")
             ->body("$inserted peserta berhasil ditambahkan")
             ->success()
             ->send();
 
-        // ⚠️ notif duplicate
+        /**
+         * ⚠️ NOTIFIKASI DUPLIKAT
+         */
         if (count($duplicates) > 0) {
+
+            $duplicateList = array_slice($duplicates, 0, 5); // tampilkan max 5
+            $more = count($duplicates) > 5 ? ' dan lainnya...' : '';
+
             FilamentNotification::make()
                 ->title("Data duplikat ditemukan")
-                ->body("Peserta berikut sudah terdaftar:\n" . implode(', ', $duplicates))
+                ->body(
+                    "Peserta berikut sudah terdaftar:\n" .
+                    implode(', ', $duplicateList) .
+                    $more
+                )
                 ->danger()
                 ->send();
         }
@@ -116,11 +142,17 @@ class ParticipantsImport implements ToCollection, WithHeadingRow
     {
         $phone = preg_replace('/\D/', '', (string) $phone);
 
+        if (!$phone) {
+            return null;
+        }
+
+        // ubah 62 menjadi 0
         if (substr($phone, 0, 2) === '62') {
             $phone = '0' . substr($phone, 2);
         }
 
-        if ($phone && substr($phone, 0, 1) !== '0') {
+        // jika tidak diawali 0
+        if (substr($phone, 0, 1) !== '0') {
             $phone = '0' . $phone;
         }
 
