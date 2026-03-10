@@ -125,7 +125,7 @@ class ResultDocxService
             if ($score === null) continue;
             $code = self::mapScoreToCode((int) $score);
             foreach (['R','K','C','B','T'] as $opt) {
-                $template->setValue("{$prefix}_{$opt}", $code === $opt ? '✘' : '');
+                $template->setValue("{$prefix}_{$opt}", $code === $opt ? 'X' : '');
             }
         }
         $template->setValue('SPM_RESULT_CATEGORY', $spm?->category ?? '-');
@@ -157,7 +157,7 @@ class ResultDocxService
                 if ($score === null) continue;
                 $code = self::$mapper((int) $score);
                 foreach (['R','K','C','B','T'] as $opt) {
-                    $template->setValue("{$prefix}_{$opt}", $code === $opt ? '✘' : '');
+                    $template->setValue("{$prefix}_{$opt}", $code === $opt ? 'X' : '');
                 }
             }
         }

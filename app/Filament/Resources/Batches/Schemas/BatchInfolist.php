@@ -34,25 +34,22 @@ class BatchInfolist
             // -------------------------
             Section::make()
                 ->schema([
-                    Action::make('downloadResults')
-                        ->label('Download Hasil (PDF)')
-                        ->button()
-                        ->color('info')
-                        ->icon('heroicon-o-document-arrow-down')
-                        ->visible(fn ($record) => $record->is_result_processed)
-                        ->action(function ($record) {
-                            $zipPath = storage_path('app/temp/batch-' . $record->id . '-hasil-psikotes.zip');
-                            $zip = new \ZipArchive();
-                            $zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE);
-
-                            foreach ($record->users as $user) {
-                                $pdf = \App\Services\ResultPdfService::generate($user);
-                                $zip->addFile($pdf, basename($pdf));
-                            }
-
-                            $zip->close();
-                            return response()->download($zipPath);
-                        }),
+                    Action::make('downloadResults') 
+                        ->label('Download Hasil (DOCX)') 
+                        ->button() ->color('info') 
+                        ->icon('heroicon-o-document-arrow-down') 
+                        ->visible(fn ($record) => $record->is_result_processed) 
+                            ->action(function ($record) { 
+                                $zipPath = storage_path( 'app/temp/batch-' . $record->id . '-hasil-psikotes.zip' ); 
+                                $zip = new \ZipArchive(); $zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE); 
+                                foreach ($record->users as $user) {
+                                    $docx = \App\Services\ResultDocxService::generate($user); 
+                                    $zip->addFile($docx, basename($docx)); 
+                                    
+                                } 
+                                $zip->close(); return response()->download($zipPath); 
+                                
+                            }),
                 ])
                 ->columnSpanFull(),
 
