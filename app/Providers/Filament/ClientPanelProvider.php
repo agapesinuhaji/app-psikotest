@@ -64,8 +64,8 @@ class ClientPanelProvider extends PanelProvider
             )
 
             ->widgets([
-                AccountWidget::class,
-                FilamentInfoWidget::class,
+                // AccountWidget::class,
+                // FilamentInfoWidget::class,
             ])
 
             /*

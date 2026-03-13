@@ -37,7 +37,7 @@ class PsikologPanelProvider extends PanelProvider
             ->discoverWidgets(in: app_path('Filament/Psikolog/Widgets'), for: 'App\Filament\Psikolog\Widgets')
             ->widgets([
                 AccountWidget::class,
-                FilamentInfoWidget::class,
+                // FilamentInfoWidget::class,
             ])
             ->middleware([
                 EncryptCookies::class,
