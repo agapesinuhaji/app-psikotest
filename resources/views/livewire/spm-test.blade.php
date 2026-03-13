@@ -263,7 +263,7 @@
             <div class="mt-6 flex justify-between gap-3">
 
                 {{-- BUTTON KEMBALI --}}
-                <button
+                {{-- <button
                     wire:click="previousQuestion"
                     wire:loading.attr="disabled"
                     @if($currentIndex === 0) disabled @endif
@@ -281,7 +281,7 @@
                         disabled:cursor-not-allowed
                     ">
                     Kembali
-                </button>
+                </button> --}}
 
                 {{-- BUTTON SELANJUTNYA --}}
                 <button

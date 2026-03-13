@@ -29,17 +29,10 @@ class ClientBatchesTable
                     ->searchable()
                     ->sortable(),
 
-                TextColumn::make('date')
-                    ->date()
+                TextColumn::make('date') 
+                    ->label('Test Time')
+                    ->dateTime('d M Y H:i') 
                     ->sortable(),
-
-                TextColumn::make('start_time')
-                    ->label('Start')
-                    ->time(),
-
-                TextColumn::make('end_time')
-                    ->label('End')
-                    ->time(),
 
                 // ==============================
                 // STATUS BATCH

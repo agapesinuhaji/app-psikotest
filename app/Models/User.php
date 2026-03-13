@@ -62,7 +62,7 @@ class User extends Authenticatable implements FilamentUser
             // Panel Admin
             'admin' => 
                 $this->role === 'administrator' 
-                || $this->is_admin == 1,
+                && $this->is_admin == 1,
 
             // Panel Client
             'client' => 

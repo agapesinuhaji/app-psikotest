@@ -100,6 +100,7 @@ class BatchInfolist
                                         ),
                                     TextEntry::make('age'),
                                     TextEntry::make('last_education'),
+                                    TextEntry::make('phone')->label('No Telp'),
                                     TextEntry::make('nama_ayah')->label('Nama Ayah'),
                                 ])
                                 ->columns(4),

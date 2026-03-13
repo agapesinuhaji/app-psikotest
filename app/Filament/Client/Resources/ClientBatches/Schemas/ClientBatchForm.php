@@ -104,8 +104,7 @@ class ClientBatchForm
                                 TextInput::make('nik')
                                     ->label('NIK')
                                     ->required()
-                                    ->maxLength(16)
-                                    ->numeric(),
+                                    ->maxLength(16),
 
                                 TextInput::make('nama_ayah')
                                     ->label('Nama Ayah')

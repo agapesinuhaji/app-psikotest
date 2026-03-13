@@ -29,14 +29,31 @@ class PsikologBatchesTable
                     ->dateTime('d M Y H:i') 
                     ->sortable(),
 
-                BadgeColumn::make('status') // Gunakan BadgeColumn
-                    ->label('Status')
+                BadgeColumn::make('status')
+                    ->label('Batch Status')
                     ->colors([
-                        'warning' => 'standby',  // kuning
-                        'primary' => 'open',     // biru
-                        'success' => 'done',     // hijau
-                        'secondary' => fn($state) => !in_array($state, ['standby', 'open', 'done']), // abu-abu
+                        'primary' => 'standby',
+                        'success' => 'active',
+                        'danger' => 'closed',
                     ]),
+
+                // ==============================
+                // STATUS PEMBAYARAN
+                // ==============================
+                BadgeColumn::make('payment.status')
+                    ->label('Payment')
+                    ->colors([
+                        'warning' => 'pending',
+                        'success' => 'paid',
+                        'danger' => 'failed',
+                        'gray' => fn ($state) => $state === null,
+                    ])
+                    ->formatStateUsing(fn ($state) => match ($state) {
+                        'pending' => 'Menunggu',
+                        'paid' => 'Lunas',
+                        'failed' => 'Gagal',
+                        default => 'Belum Bayar',
+                    }),
             ])
             ->filters([
                 //
