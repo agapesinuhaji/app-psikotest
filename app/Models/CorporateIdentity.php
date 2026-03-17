@@ -17,5 +17,6 @@ class CorporateIdentity extends Model
         'strk_sik',
         'sipp_sippk',
         'address',
+        'price',
     ];
 }

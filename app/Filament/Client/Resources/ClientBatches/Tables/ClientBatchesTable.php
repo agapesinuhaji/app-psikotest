@@ -2,18 +2,18 @@
 
 namespace App\Filament\Client\Resources\ClientBatches\Tables;
 
+use App\Models\CorporateIdentity;
+use App\Models\Payment;
+use App\Services\MidtransService;
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
-use Filament\Tables\Table;
-use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Columns\BadgeColumn;
-use Filament\Actions\Action;
 use Filament\Notifications\Notification;
-
-use App\Models\Payment;
-use App\Services\MidtransService;
+use Filament\Tables\Columns\BadgeColumn;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Table;
 
 class ClientBatchesTable
 {
@@ -103,7 +103,10 @@ class ClientBatchesTable
                         // ===============================
                         // 2. Hitung biaya
                         // ===============================
-                        $hargaPerPeserta = 200000;
+                        $corporate = CorporateIdentity::first();
+
+                        // Pastikan tidak null
+                        $hargaPerPeserta = $corporate?->price ?? 0;
 
                         $subtotal = $participants * $hargaPerPeserta;
                         $ppn = (int) ($subtotal * 0.11);
@@ -154,7 +157,7 @@ class ClientBatchesTable
 
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+                    // DeleteBulkAction::make(),
                 ]),
             ]);
     }

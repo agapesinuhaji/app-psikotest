@@ -101,14 +101,15 @@ class ResultDocxService
             'USER_LAST_EDUCATION' => $user->last_education,
             'USER_PLACE_OF_BIRTH' => $user->place_of_birth,
             'USER_DATE_OF_BIRTH' => $user->date_of_birth
-                ? Carbon::parse($user->date_of_birth)->translatedFormat('d F Y')
+                ? Carbon::parse($user->date_of_birth)->locale('id')->translatedFormat('d F Y')
                 : '-',
 
             'BATCH_START_AT' => $batch?->start_time
-                ? Carbon::parse($batch->start_time)->translatedFormat('d F Y')
+                ? Carbon::parse($batch->start_time)->locale('id')->translatedFormat('d F Y')
                 : '-',
+
             'BATCH_END_AT' => $batch?->end_time
-                ? Carbon::parse($batch->end_time)->translatedFormat('d F Y')
+                ? Carbon::parse($batch->end_time)->locale('id')->translatedFormat('d F Y')
                 : '-',
         ]);
 

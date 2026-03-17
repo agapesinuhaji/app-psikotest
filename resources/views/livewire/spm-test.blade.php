@@ -398,4 +398,28 @@
         });
     </script>
 
+    <script>
+document.addEventListener("keydown", function(e){
+
+    // Print Screen
+    if (e.key === "PrintScreen") {
+        alert("Screenshot tidak diperbolehkan.");
+        navigator.clipboard.writeText("");
+    }
+
+    // Mac screenshot
+    if (e.metaKey && e.shiftKey && (e.key === "3" || e.key === "4")) {
+        e.preventDefault();
+        alert("Screenshot tidak diperbolehkan.");
+    }
+
+    // Windows screenshot tool
+    if (e.ctrlKey && e.shiftKey && e.key === "S") {
+        e.preventDefault();
+        alert("Screenshot tidak diperbolehkan.");
+    }
+
+});
+</script>
+
 </div>

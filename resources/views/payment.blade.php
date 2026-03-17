@@ -134,25 +134,25 @@
 
 <body>
 
-<div class="card">
-    <div class="title">Pembayaran Batch</div>
-    <div class="subtitle">Selesaikan pembayaran untuk melanjutkan</div>
+    <div class="card">
+        <div class="title">Pembayaran Batch</div>
+        <div class="subtitle">Selesaikan pembayaran untuk melanjutkan</div>
 
-    <div class="payment-info">
+        <div class="payment-info">
 
-        <div class="row">
-            <div class="label">Order ID</div>
-            <div class="value">{{ $payment->order_id }}</div>
-        </div>
+            <div class="row">
+                <div class="label">Order ID</div>
+                <div class="value">{{ $payment->order_id }}</div>
+            </div>
 
-        <div class="row">
-            <div class="label">Jumlah Peserta</div>
-            <div class="value">{{ $payment->participants ?? 0 }} orang</div>
-        </div>
+            <div class="row">
+                <div class="label">Jumlah Peserta</div>
+                <div class="value">{{ $payment->participants ?? 0 }} orang</div>
+            </div>
 
-        <div class="row">
+            <div class="row">
             <div class="label">Harga per Peserta</div>
-            <div class="value">Rp {{ number_format(200000, 0, ',', '.') }}</div>
+            <div class="value">Rp {{ number_format($hargaPerPeserta, 0, ',', '.') }}</div>
         </div>
 
         <hr style="border: none; border-top: 1px dashed #ddd; margin:10px 0">
@@ -160,14 +160,14 @@
         <div class="row">
             <div class="label">Subtotal</div>
             <div class="value">
-                Rp {{ number_format(($payment->participants ?? 0) * 200000, 0, ',', '.') }}
+                Rp {{ number_format(($payment->participants ?? 0) * $hargaPerPeserta, 0, ',', '.') }}
             </div>
         </div>
 
         <div class="row">
             <div class="label">PPN (11%)</div>
             <div class="value">
-                Rp {{ number_format((($payment->participants ?? 0) * 200000) * 0.11, 0, ',', '.') }}
+                Rp {{ number_format((($payment->participants ?? 0) * $hargaPerPeserta) * 0.11, 0, ',', '.') }}
             </div>
         </div>
 

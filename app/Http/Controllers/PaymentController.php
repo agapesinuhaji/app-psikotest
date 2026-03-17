@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use App\Models\CorporateIdentity;
 use App\Models\Payment;
 
 class PaymentController extends Controller
@@ -11,8 +11,11 @@ class PaymentController extends Controller
     {
         $payment = Payment::where('order_id', $orderId)->firstOrFail();
 
+        $hargaPerPeserta = CorporateIdentity::value('price') ?? 0;
+
         return view('payment', [
-            'payment' => $payment
+            'payment' => $payment,
+            'hargaPerPeserta' => $hargaPerPeserta,
         ]);
     }
 }

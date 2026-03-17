@@ -2,17 +2,17 @@
 
 namespace App\Filament\Client\Resources\ClientBatches\Schemas;
 
-use Filament\Actions\Action;
-use Filament\Schemas\Schema;
-use Filament\Schemas\Components\Actions;
-use Filament\Schemas\Components\Section;
-use Filament\Infolists\Components\TextEntry;
-use Filament\Infolists\Components\RepeatableEntry;
-use Filament\Forms\Components\TextInput;
-
+use App\Models\CorporateIdentity;
 use App\Models\Payment;
 use App\Services\MidtransService;
+use Filament\Actions\Action;
+use Filament\Forms\Components\TextInput;
+use Filament\Infolists\Components\RepeatableEntry;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
+use Filament\Schemas\Components\Actions;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Schema;
 
 class ClientBatchInfolist
 {
@@ -66,15 +66,21 @@ class ClientBatchInfolist
                     TextEntry::make('subtotal')
                         ->label('Total Harga')
                         ->state(function ($record) {
-                            $total = $record->users()->count() * 200000;
+                            $hargaPerPeserta = CorporateIdentity::value('price') ?? 0;
+
+                            $total = $record->users()->count() * $hargaPerPeserta;
+
                             return 'Rp ' . number_format($total, 0, ',', '.');
                         }),
 
                     TextEntry::make('ppn')
                         ->label('PPN 11%')
                         ->state(function ($record) {
-                            $subtotal = $record->users()->count() * 200000;
+                            $hargaPerPeserta = CorporateIdentity::value('price') ?? 0;
+
+                            $subtotal = $record->users()->count() * $hargaPerPeserta;
                             $ppn = (int) ($subtotal * 0.11);
+
                             return 'Rp ' . number_format($ppn, 0, ',', '.');
                         }),
 
@@ -108,7 +114,7 @@ class ClientBatchInfolist
                                     return;
                                 }
 
-                                $hargaPerPeserta = 200000;
+                                $hargaPerPeserta = CorporateIdentity::value('price') ?? 0;
                                 $subtotal = $participants * $hargaPerPeserta;
                                 $ppn = (int) ($subtotal * 0.11);
                                 $uniqueCode = rand(1, 300);

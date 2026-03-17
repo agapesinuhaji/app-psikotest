@@ -27,6 +27,12 @@ class CorporateIdentityForm
                 TextInput::make('sipp_sippk')
                     ->label('SIPP / SIPPK'),
                 TextInput::make('address'),
+                TextInput::make('price')
+                    ->label('Harga per Peserta')
+                    ->numeric()
+                    ->prefix('Rp')
+                    ->required()
+                    ->minValue(0),
             ]);
     }
 }

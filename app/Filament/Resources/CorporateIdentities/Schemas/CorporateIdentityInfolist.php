@@ -17,6 +17,9 @@ class CorporateIdentityInfolist
                 TextEntry::make('strk_sik'),
                 TextEntry::make('sipp_sippk'),
                 TextEntry::make('address'),
+                TextEntry::make('price')
+                    ->label('Harga per Peserta')
+                    ->formatStateUsing(fn ($state) => 'Rp ' . number_format($state, 0, ',', '.')),
                 ImageEntry::make('logo')
                     ->label('Logo')
                     ->disk('public')
